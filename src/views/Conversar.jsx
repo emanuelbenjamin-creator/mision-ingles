@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import SpeakButton from "../components/SpeakButton.jsx";
 import LiveVoice from "./LiveVoice.jsx";
 import MicButton from "../components/MicButton.jsx";
-import { SCENARIOS } from "../content/scenarios.js";
-import { todaysScenario } from "../lib/missions.js";
+import { scenariosFor, todaysScenario } from "../lib/missions.js";
 import { api } from "../lib/api.js";
 import { addMistake, completeMission, logSession } from "../lib/game.js";
 
@@ -14,7 +13,8 @@ const who = sc => sc.role.split(",")[0].replace(/^an? /, "");
 const IELTS = { id: "ielts", name: "Examinador IELTS" };
 
 export default function Conversar({ s, update, today, ai, toast, scen, setScen, mode = "chat", setMode }) {
-  const sc = SCENARIOS.find(x => x.id === scen) || todaysScenario(today);
+  const list = scenariosFor(s);
+  const sc = list.find(x => x.id === scen) || todaysScenario(today, s);
   const voiceSc = scen === "ielts" ? IELTS : sc;
   const [turns, setTurns] = useState(() => opener(sc));
   const [input, setInput] = useState("");
@@ -107,9 +107,9 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen, 
         <div className="card">
           <div className="card-head"><h2>Escenarios</h2><span className="small muted">Juego de roles</span></div>
           <div className="scen">
-            {(mode === "voice" ? [...SCENARIOS, IELTS] : SCENARIOS).map(x => (
+            {(mode === "voice" ? [...list, IELTS] : list).map(x => (
               <button type="button" key={x.id} aria-pressed={x.id === (mode === "voice" ? voiceSc.id : sc.id)} onClick={() => { if (ctl.current) ctl.current.abort(); setScen(x.id); }}>
-                {x.name}{x.id === todaysScenario(today).id ? " · hoy" : ""}
+                {x.name}{x.id === todaysScenario(today, s).id ? " · hoy" : ""}
               </button>
             ))}
           </div>

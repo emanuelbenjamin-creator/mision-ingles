@@ -276,3 +276,5 @@ textarea { min-height: 150px; resize: vertical; }
 .tw:hover { background: var(--surface-2); }
 .tw.g { text-decoration: underline dotted var(--accent); text-underline-offset: 4px; }
 .tw.on { background: var(--accent-soft); color: var(--accent); }
+em.up { color: var(--good); font-style: normal; font-weight: 700; }
+em.down { color: var(--bad); font-style: normal; font-weight: 700; }

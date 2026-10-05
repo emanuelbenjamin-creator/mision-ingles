@@ -13,6 +13,7 @@ import { dkey } from "./lib/dates.js";
 import { streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio } from "./lib/audio.js";
+import { addProfessionCards } from "./lib/state.js";
 
 const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"]];
 const readTab = () => { try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; } };
@@ -69,7 +70,7 @@ export default function App() {
 
       <main className="wrap">
         {!s.profile.onboarded ? (
-          <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
+          <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; addProfessionCards(d); return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
         ) : (
           <section className="view" key={nav.tab}>
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} />}

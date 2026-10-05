@@ -24,6 +24,8 @@ async function onboard(page) {
   await expect(page.getByTestId("onboarding")).toBeVisible();
   await page.getByRole("button", { name: "Inglés para el trabajo" }).click();
   await page.getByRole("button", { name: "Continuar" }).click();
+  await page.getByRole("button", { name: "Contabilidad y tributos" }).click();
+  await page.getByRole("button", { name: "Continuar" }).click();
   await page.getByRole("button", { name: /^Regular/ }).click();
   await page.getByRole("button", { name: "Continuar" }).click();
   await page.getByRole("button", { name: "Hacer la prueba de nivel" }).click();
@@ -207,6 +209,7 @@ test("escuchar y leer: dictado y lectura completan sus misiones; tocar una palab
   await page.getByTestId("reading").getByRole("button", { name: "invoice", exact: true }).click();
   await expect(page.getByTestId("word-card")).toContainText("factura");
   await page.getByRole("button", { name: "+ Agregar a mis tarjetas" }).click();
+  await expect(page.locator(".toast")).toContainText("ya estaba en tus tarjetas", { timeout: 15000 }); // los avisos salen en cola
   await page.getByTestId("reading").getByRole("button", { name: "audit", exact: true }).click();
   await expect(page.getByTestId("word-card")).toContainText("auditoría");
   for (const [i, opt] of [[0, "Monday"], [1, "Her manager"], [2, "Happy"]]) await page.locator(".q").nth(i).getByRole("button", { name: opt }).click();
@@ -216,5 +219,28 @@ test("escuchar y leer: dictado y lectura completan sus misiones; tocar una palab
   await expect(page.getByTestId("mission-dictation")).toHaveClass(/done/);
   await expect(page.getByTestId("mission-reading")).toHaveClass(/done/);
   await page.getByRole("tab", { name: "Repaso" }).click();
-  await expect(page.locator(".tile", { hasText: "nuevas" })).toContainText("31");
+  await expect(page.locator(".tile", { hasText: "nuevas" })).toContainText("42"); // 30 base + 12 de contabilidad («invoice» ya estaba: no se duplica)
+});
+
+test("reporte semanal y lección con tus errores", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/mistakes-lesson", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+    summary_es: "Confundes have y be.", patterns: [{ rule: "Edad con to be", explanation_es: "Usa be para la edad.", examples: ["I am 30 years old."] }],
+    exercises: [{ s: "She ___ 25.", o: ["is", "has"], a: 0, why: "be" }, { s: "I ___ hungry.", o: ["am", "have"], a: 0, why: "be" }, { s: "We ___ right.", o: ["are", "have"], a: 0, why: "be" }] }) }));
+  await onboard(page);
+  await expect(page.getByTestId("weekly-report")).toContainText("Reporte semanal");
+  await page.getByTestId("weekly-report").getByRole("button", { name: "Anterior" }).click();
+  await expect(page.getByTestId("weekly-report")).toContainText("Desde el lunes");
+  await page.evaluate(() => {
+    const st = JSON.parse(localStorage.getItem("mision-ingles-v1"));
+    st.mistakes = [1, 2, 3, 4, 5].map(i => ({ d: "2026-10-01", wrong: "I have " + i + " years", right: "I am " + i + " years old", why: "", rule: "Edad con to be", src: "habla" }));
+    localStorage.setItem("mision-ingles-v1", JSON.stringify(st));
+  });
+  await page.reload();
+  await page.getByRole("tab", { name: "Repaso" }).click();
+  await page.getByRole("button", { name: "Crear mi lección de la semana" }).click();
+  await expect(page.getByTestId("lesson")).toContainText("Confundes have y be.");
+  for (let i = 0; i < 3; i++) await page.getByTestId("lesson").locator(".q").nth(i).locator(".opt").first().click();
+  await expect(page.getByTestId("lesson").locator(".opt.right")).toHaveCount(3);
+  await expect(page.getByTestId("xp-chip")).toContainText("15 /");
 });

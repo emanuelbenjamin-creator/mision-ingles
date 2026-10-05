@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { GOALS, LEVELS } from "../content/meta.js";
 import { exportState, importState } from "../lib/storage.js";
-import { defaultState } from "../lib/state.js";
+import { addProfessionCards, defaultState } from "../lib/state.js";
+import { PROFESSIONS } from "../content/professions.js";
 
 export default function Ajustes({ s, update, replace, server, onClose, toast }) {
   const [p, setP] = useState({ ...s.profile });
@@ -15,7 +16,7 @@ export default function Ajustes({ s, update, replace, server, onClose, toast }) 
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const save = () => { update(d => { d.profile = { ...d.profile, ...p, name: p.name.trim().slice(0, 40), accessCode: p.accessCode.trim() }; return ["Ajustes guardados"]; }); onClose(); };
+  const save = () => { update(d => { const changed = d.profile.profession !== p.profession; d.profile = { ...d.profile, ...p, name: p.name.trim().slice(0, 40), accessCode: p.accessCode.trim() }; const n = changed ? addProfessionCards(d) : 0; return [n ? `Ajustes guardados · ${n} tarjetas de tu profesión agregadas` : "Ajustes guardados"]; }); onClose(); };
   const download = () => {
     const blob = new Blob([exportState(s)], { type: "application/json" });
     const a = document.createElement("a");
@@ -44,6 +45,7 @@ export default function Ajustes({ s, update, replace, server, onClose, toast }) 
         <div className="field"><label htmlFor="stName">Tu nombre</label><input type="text" id="stName" value={p.name} onChange={e => set({ name: e.target.value })} placeholder="Opcional" /></div>
         <div className="field"><label htmlFor="stLevel">Nivel actual</label><select id="stLevel" value={p.level} onChange={e => set({ level: e.target.value })}>{LEVELS.slice(0, 5).map(l => <option key={l}>{l}</option>)}</select></div>
         <div className="field"><label htmlFor="stGoal">Objetivo</label><select id="stGoal" value={p.goal} onChange={e => set({ goal: e.target.value })}>{Object.entries(GOALS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+        <div className="field"><label htmlFor="stProf">Profesión</label><select id="stProf" value={p.profession || "general"} onChange={e => set({ profession: e.target.value })}>{Object.entries(PROFESSIONS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select></div>
         <div className="field"><label htmlFor="stDaily">Meta diaria</label><select id="stDaily" value={p.dailyGoal} onChange={e => set({ dailyGoal: +e.target.value })}>{[[30, "30 XP · 10 min (relajado)"], [50, "50 XP · 15 min (regular)"], [80, "80 XP · 25 min (serio)"], [120, "120 XP · 40 min (intenso)"]].map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></div>
         <div className="field"><label htmlFor="stVoice">Voz para escuchar</label><select id="stVoice" value={p.voiceMode === "browser" ? "browser" : p.voice} onChange={e => set(e.target.value === "browser" ? { voiceMode: "browser" } : { voiceMode: "natural", voice: e.target.value })}>
           <option value="Kore">Natural de Gemini · femenina</option><option value="Puck">Natural de Gemini · masculina</option><option value="Aoede">Natural de Gemini · femenina 2</option><option value="Charon">Natural de Gemini · masculina 2</option><option value="browser">Voz del navegador (sin internet)</option>

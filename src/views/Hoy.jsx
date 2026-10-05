@@ -2,6 +2,7 @@ import Icon from "../components/Icon.jsx";
 import Ring from "../components/Ring.jsx";
 import Meter from "../components/Meter.jsx";
 import Chart14 from "../components/Chart14.jsx";
+import WeeklyReport from "../components/WeeklyReport.jsx";
 import { LEVELS, GOALS } from "../content/meta.js";
 import { addDays } from "../lib/dates.js";
 import { streak, missionDone, MISSION_XP, BADGES } from "../lib/game.js";
@@ -68,6 +69,7 @@ export default function Hoy({ s, today, go }) {
             <Chart14 xpByDay={s.xpByDay} goal={goal} today={today} />
             <p className="small muted" style={{ marginTop: 8 }}>Verde: meta cumplida · ámbar: practicaste pero sin llegar a la meta.</p>
           </div>
+          <WeeklyReport s={s} today={today} />
         </div>
 
         <div className="stack">

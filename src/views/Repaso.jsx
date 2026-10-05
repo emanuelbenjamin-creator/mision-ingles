@@ -1,12 +1,13 @@
 import { useState } from "react";
 import SpeakButton from "../components/SpeakButton.jsx";
+import MistakesLesson from "../components/MistakesLesson.jsx";
 import { dueCards, ivlLabel, learnedCount, NEW_PER_DAY, schedule } from "../lib/srs.js";
 import { playAudio } from "../lib/audio.js";
 import { completeMission } from "../lib/game.js";
 
 const GRADES = ["Otra vez", "Difícil", "Bien", "Fácil"];
 
-export default function Repaso({ s, update, today }) {
+export default function Repaso({ s, update, today, ai, toast }) {
   const [queue, setQueue] = useState(() => dueCards(s, today).map(c => c.id));
   const [show, setShow] = useState(false);
   const card = s.cards.find(c => c.id === queue[0]);
@@ -65,6 +66,10 @@ export default function Repaso({ s, update, today }) {
         </div>
       </div>
       <div className="stack">
+        <div className="card">
+          <div className="card-head"><h2>Tu lección de la semana</h2><span className="small muted">con tus errores</span></div>
+          <MistakesLesson s={s} update={update} today={today} ai={ai} toast={toast} />
+        </div>
         <div className="card">
           <div className="card-head"><h2>Cuaderno de errores</h2><span className="small muted">{s.mistakes.length} guardados</span></div>
           {s.mistakes.length ? (

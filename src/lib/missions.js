@@ -3,14 +3,20 @@ import { SOUNDS } from "../content/sounds.js";
 import { SCENARIOS } from "../content/scenarios.js";
 import { GRAMMAR } from "../content/grammar.js";
 import { hash } from "./dates.js";
+import { PROFESSIONS } from "../content/professions.js";
 import { band, levelIdx } from "./level.js";
 import { dueCards } from "./srs.js";
 
 /* Las misiones del día dependen solo de la fecha y del nivel: son las mismas toda la jornada. */
 
-export const todaysTopic = (s, today, offset = 0) => { const l = SPEAK_TOPICS[band(s.profile.level)]; return l[(hash(today + "speak") + offset) % l.length]; };
+const prof = s => PROFESSIONS[s && s.profile && s.profile.profession] || PROFESSIONS.general;
+/** Temas para hablar: los de la banda de nivel + los de la profesión. */
+export const topicsFor = s => [...SPEAK_TOPICS[band(s.profile.level)], ...prof(s).topics];
+/** Escenarios de conversación: generales + los de la profesión. */
+export const scenariosFor = s => [...SCENARIOS, ...prof(s).scenarios];
+export const todaysTopic = (s, today, offset = 0) => { const l = topicsFor(s); return l[(hash(today + "speak") + offset) % l.length]; };
 export const todaysSound = today => SOUNDS[hash(today + "sound") % SOUNDS.length];
-export const todaysScenario = today => SCENARIOS[hash(today + "scen") % SCENARIOS.length];
+export const todaysScenario = (today, s) => { const l = s ? scenariosFor(s) : SCENARIOS; return l[hash(today + "scen") % l.length]; };
 
 export function todaysGrammar(s, today) {
   const max = levelIdx(s.profile.level);
@@ -21,7 +27,7 @@ export function todaysGrammar(s, today) {
 }
 
 export function missionList(s, today) {
-  const sound = todaysSound(today), g = todaysGrammar(s, today), sc = todaysScenario(today), tp = todaysTopic(s, today);
+  const sound = todaysSound(today), g = todaysGrammar(s, today), sc = todaysScenario(today, s), tp = todaysTopic(s, today);
   const due = dueCards(s, today).length;
   return [
     { id: "speak", icon: "mic", title: "Habla 60 segundos", sub: tp.t, go: { tab: "hablar", mode: "speak" } },

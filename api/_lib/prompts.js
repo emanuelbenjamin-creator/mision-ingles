@@ -184,3 +184,28 @@ export function normalizeReading(o) {
 export function wordPrompt(word, sentence) {
   return `An English learner (native Spanish speaker) tapped the word "${word}" in this sentence: "${sentence}". Reply with ONLY a JSON object: {"es":"traducción al español en este contexto (máx. 6 palabras)","ipa":"IPA pronunciation","example":"another short natural English example sentence using it"}`;
 }
+
+/* ---------- Lección con tus errores ---------- */
+export function lessonPrompt(lv, mistakes) {
+  const list = mistakes.map((m, i) => `${i + 1}. "${m.wrong}" → "${m.right}" (${m.rule})`).join("\n");
+  return `These are recent mistakes of an English learner (CEFR ${lv}, native Spanish speaker):
+${list}
+
+Create a short personalized lesson that groups them into 2-3 underlying patterns. Reply with ONLY a JSON object:
+{"summary_es":"1-2 frases en español sobre qué está fallando","patterns":[{"rule":"nombre corto en español","explanation_es":"explicación clara y breve en español","examples":["correct English example 1","correct English example 2"]}],"exercises":[{"s":"English sentence with ___ for the gap","o":["option","option","option"],"a":0,"why":"explicación breve en español"}]}
+Write exactly 5 exercises targeting those patterns (new sentences, not copies of the mistakes); "a" is the index of the correct option.`;
+}
+
+export function normalizeLesson(o) {
+  const exercises = arr(o && o.exercises, 6).map(x => {
+    const opts = arr(x && x.o, 4).map(v => str(v, 80)).filter(Boolean);
+    const a = Math.round(Number(x && x.a));
+    return { s: str(x && x.s, 200), o: opts, a: Number.isInteger(a) && a >= 0 && a < opts.length ? a : -1, why: str(x && x.why, 300) };
+  }).filter(x => x.s.includes("___") && x.o.length >= 2 && x.a >= 0);
+  if (exercises.length < 3) throw new HttpError(502, "invalid_json", "La lección llegó incompleta. Inténtalo otra vez.");
+  return {
+    summary_es: str(o && o.summary_es, 400),
+    patterns: arr(o && o.patterns, 3).map(p => ({ rule: str(p && p.rule, 60), explanation_es: str(p && p.explanation_es, 500), examples: arr(p && p.examples, 3).map(e => str(e, 160)).filter(Boolean) })).filter(p => p.rule),
+    exercises,
+  };
+}

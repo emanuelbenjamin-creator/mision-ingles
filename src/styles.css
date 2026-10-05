@@ -261,3 +261,10 @@ textarea { min-height: 150px; resize: vertical; }
 .progress-dots i { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2); }
 .progress-dots i.on { background: var(--accent); }
 .err { color: var(--bad); font-size: .9rem; }
+/* Voz en vivo */
+.live-stage { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 16px; border-radius: var(--r); background: var(--surface-2); }
+.live-orb { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); color: var(--muted); flex: none; transition: transform .3s ease, background .3s ease; }
+.live-orb svg { width: 26px; height: 26px; }
+.live-stage.listening .live-orb { background: var(--accent-soft); color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
+.live-stage.speaking .live-orb { background: var(--accent); color: var(--accent-ink); transform: scale(1.08); }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }

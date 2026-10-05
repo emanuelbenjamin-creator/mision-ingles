@@ -148,3 +148,17 @@ test("el botón de audio cambia a Detener mientras suena y vuelve a Escuchar", a
   await expect(btn).toHaveAttribute("aria-label", "Detener");
   expect(ttsCalls).toBe(1);
 });
+
+test("voz en vivo: muestra la llamada, el examinador IELTS y los errores del servidor", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/live-token", route => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ code: "rate_limited", error: "Llegaste al límite de uso de hoy. Vuelve mañana." }) }));
+  await onboard(page);
+  await page.getByRole("tab", { name: "Conversar" }).click();
+  await page.getByRole("button", { name: "Voz en vivo" }).click();
+  await expect(page.getByTestId("live")).toContainText("Listo para llamar");
+  await page.getByRole("button", { name: "Examinador IELTS" }).click();
+  await expect(page.getByTestId("live")).toContainText("Examinador IELTS");
+  await page.getByRole("button", { name: "Iniciar llamada" }).click();
+  await expect(page.locator(".err")).toContainText("límite de uso de hoy");
+  await expect(page.getByRole("button", { name: "Iniciar llamada" })).toBeVisible();
+});

@@ -83,3 +83,39 @@ export function askPrompt(q, lv) {
   return `Pregunta de un alumno hispanohablante de nivel ${lv}: ${q}
 Responde en español, en menos de 180 palabras, sin markdown (usa guiones simples si haces una lista), con 2 o 3 ejemplos en inglés con su traducción. Si la pregunta no es sobre el idioma inglés, redirígela amablemente al aprendizaje del inglés.`;
 }
+
+/* ---------- Voz en vivo (Gemini Live) ---------- */
+export const IELTS_EXAMINER = { id: "ielts", name: "Examinador IELTS", role: "a certified IELTS Speaking examiner" };
+
+export function liveSystem(sc, lv) {
+  if (sc.id === "ielts") {
+    return `You are a friendly but neutral certified IELTS Speaking examiner. Conduct a realistic IELTS Speaking test in English with a candidate whose native language is Spanish (approximate level ${lv}).
+Part 1: introduce yourself briefly, ask the candidate's name, then 4 short questions about familiar topics (home, work or studies, hobbies). Part 2: give a cue card topic with 3-4 bullet points, tell the candidate they have one minute to prepare, wait until they say they are ready, then let them speak for up to two minutes without interrupting; ask one short follow-up question. Part 3: ask 3 abstract discussion questions related to the Part 2 topic.
+Speak clearly at a natural examiner pace. Do not give feedback or scores during the test. When Part 3 is finished, say "That is the end of the speaking test. Thank you."`;
+  }
+  return `You are ${sc.role}. You are having a spoken conversation with an English learner whose native language is Spanish, CEFR level ${lv}. Stay in character and keep it natural.
+Speak clearly, at a pace and with vocabulary adapted to level ${lv}. Keep each turn short (1-3 sentences) and usually end with a question so the learner talks more than you.
+Do not correct every mistake during the conversation. If the learner makes an error that blocks understanding, rephrase their idea correctly in a natural way (recast) and continue. If the learner speaks Spanish, answer in simple English and encourage them to try in English.`;
+}
+
+export function reviewPrompt(sc, lv, turns) {
+  const transcript = turns.map(t => `${t.role === "user" ? "LEARNER" : "PARTNER"}: ${t.text}`).join("\n");
+  return `This is the transcript (speech-to-text, ignore punctuation and small artifacts) of a spoken ${sc.id === "ielts" ? "IELTS speaking test" : "roleplay: " + sc.role} with an English learner, CEFR ${lv}, native Spanish speaker.
+
+${transcript}
+
+Review ONLY the learner's lines. Reply with ONLY a JSON object:
+{"summary_es":"2-3 frases en español sobre cómo le fue","strengths_es":["fortaleza 1","fortaleza 2"],"corrections":[{"original":"exact learner words","corrected":"natural corrected version","explanation_es":"explicación breve","rule":"nombre corto de la regla"}],"fluency":0-100,"grammar":0-100,"vocabulary":0-100,"next_step_es":"un consejo concreto"}
+Max 6 corrections, most important first; only real errors.`;
+}
+
+export function normalizeReview(o) {
+  const n = x => { const v = Math.round(Number(x)); return Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : null; };
+  return {
+    summary_es: str(o && o.summary_es, 600),
+    strengths_es: arr(o && o.strengths_es, 3).map(x => str(x, 200)).filter(Boolean),
+    corrections: arr(o && o.corrections, 6).map(c => ({ original: str(c && c.original, 300), corrected: str(c && c.corrected, 300), explanation_es: str(c && c.explanation_es, 400), rule: str(c && c.rule, 60) })).filter(c => c.original && c.corrected),
+    fluency: n(o && o.fluency), grammar: n(o && o.grammar), vocabulary: n(o && o.vocabulary),
+    next_step_es: str(o && o.next_step_es, 400),
+  };
+}

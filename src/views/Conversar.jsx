@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import SpeakButton from "../components/SpeakButton.jsx";
+import LiveVoice from "./LiveVoice.jsx";
 import MicButton from "../components/MicButton.jsx";
 import { SCENARIOS } from "../content/scenarios.js";
 import { todaysScenario } from "../lib/missions.js";
@@ -10,8 +11,11 @@ const GOAL_TURNS = 4;
 const opener = sc => [{ role: "assistant", content: sc.open }];
 const who = sc => sc.role.split(",")[0].replace(/^an? /, "");
 
-export default function Conversar({ s, update, today, ai, toast, scen, setScen }) {
+const IELTS = { id: "ielts", name: "Examinador IELTS" };
+
+export default function Conversar({ s, update, today, ai, toast, scen, setScen, mode = "chat", setMode }) {
   const sc = SCENARIOS.find(x => x.id === scen) || todaysScenario(today);
+  const voiceSc = scen === "ielts" ? IELTS : sc;
   const [turns, setTurns] = useState(() => opener(sc));
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,6 +61,11 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen }
   return (
     <div className="grid2">
       <div className="card" style={{ display: "grid", gap: 14 }}>
+        <div className="seg" role="group" aria-label="Modo de conversación">
+          <button type="button" aria-pressed={mode === "chat"} onClick={() => setMode("chat")}>Chat</button>
+          <button type="button" aria-pressed={mode === "voice"} onClick={() => setMode("voice")}>Voz en vivo</button>
+        </div>
+        {mode === "voice" ? <LiveVoice s={s} update={update} today={today} ai={ai} toast={toast} sc={voiceSc} /> : <>
         <div className="card-head" style={{ margin: 0 }}>
           <h2>{sc.name}</h2>
           <span className={"pill " + (count >= GOAL_TURNS ? "ok" : "neutral")}>{Math.min(count, GOAL_TURNS)} / {GOAL_TURNS} intercambios</span>
@@ -92,13 +101,14 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen }
           <button className="btn ghost sm" type="button" onClick={() => { if (ctl.current) ctl.current.abort(); setTurns(opener(sc)); setSugs([]); setCount(0); }}>Reiniciar</button>
           {busy && <button className="btn ghost sm" type="button" onClick={() => ctl.current && ctl.current.abort()}>Detener</button>}
         </div>
+        </>}
       </div>
       <div className="stack">
         <div className="card">
           <div className="card-head"><h2>Escenarios</h2><span className="small muted">Juego de roles</span></div>
           <div className="scen">
-            {SCENARIOS.map(x => (
-              <button type="button" key={x.id} aria-pressed={x.id === sc.id} onClick={() => { if (ctl.current) ctl.current.abort(); setScen(x.id); }}>
+            {(mode === "voice" ? [...SCENARIOS, IELTS] : SCENARIOS).map(x => (
+              <button type="button" key={x.id} aria-pressed={x.id === (mode === "voice" ? voiceSc.id : sc.id)} onClick={() => { if (ctl.current) ctl.current.abort(); setScen(x.id); }}>
                 {x.name}{x.id === todaysScenario(today).id ? " · hoy" : ""}
               </button>
             ))}
@@ -106,7 +116,7 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen }
         </div>
         <div className="card" style={{ display: "grid", gap: 8 }}>
           <h3>Cómo practicar</h3>
-          <p className="muted small">Responde con frases completas. Después de cada mensaje verás si hubo un error y cómo decirlo mejor; los errores van a tu cuaderno de repaso. Pulsa «Escuchar» para oír la respuesta e imitar la entonación.</p>
+          <p className="muted small">{mode === "voice" ? "Una llamada real con el coach: habla y escucha sin escribir. Al colgar, pulsa «Revisar mi conversación» para ver tus errores y sumar XP." : null}{mode === "voice" ? <br /> : null}Responde con frases completas. Después de cada mensaje verás si hubo un error y cómo decirlo mejor; los errores van a tu cuaderno de repaso. Pulsa «Escuchar» para oír la respuesta e imitar la entonación.</p>
         </div>
       </div>
     </div>

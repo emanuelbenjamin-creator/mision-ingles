@@ -21,7 +21,7 @@ export default function App() {
   const toast = useCallback(msg => setToasts(t => [...t, msg]), []);
   const onMessages = useCallback(msgs => setToasts(t => [...t, ...msgs]), []);
   const [s, update, replace] = useStore(onMessages);
-  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null });
+  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
   const today = dkey();
@@ -73,7 +73,7 @@ export default function App() {
           <section className="view" key={nav.tab}>
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
-            {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} />}
+            {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
             {nav.tab === "gramatica" && <Gramatica {...common} topic={nav.topic} setTopic={topic => setNav(n => ({ ...n, topic }))} />}
             {nav.tab === "repaso" && <Repaso {...common} />}
           </section>

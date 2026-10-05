@@ -4,6 +4,7 @@ Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne l
 
 | Sección | Qué hace |
 |---|---|
+| **En vivo** | Panel dedicado a **Gemini Live**: conversación libre (con tema), profesor de speaking que corrige al momento, juegos de roles o examinador IELTS; ritmo natural o lento; **30 voces** para elegir y escuchar antes; visualizador de voz, transcripción, revisión al colgar e historial de llamadas |
 | **Hoy** | Meta diaria de XP, racha, gráfico de 14 días, ruta MCER, habilidades, **reporte semanal**, liga, último IELTS, errores frecuentes y logros |
 | **Misiones diarias** | 4 principales (habla 60 s, sonido del día, gramática, repaso) + bonus (conversación, dictado, lectura) |
 | **Hablar** | Habla 60 s con evaluación (fluidez, gramática, vocabulario, coherencia), **pronunciación grabando tu voz** (Gemini escucha y marca cada palabra) y **simulacro IELTS Speaking** con las 4 bandas oficiales |
@@ -15,7 +16,7 @@ Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne l
 | **Profesión** | Vocabulario, temas y conversaciones de Contabilidad y tributos, Ventas, Tecnología, Salud o Turismo |
 | **Recordatorios** | Notificación si tu racha está en riesgo |
 
-Todos los botones de audio cambian a **Detener** mientras suenan. Las voces son las naturales de Gemini, con la voz del navegador como respaldo. Sin IA, la app sigue funcionando en **modo básico** (20 reglas de errores típicos, dictado, repaso, gramática).
+Todos los botones de audio cambian a **Detener** y se ponen **verdes con una barra de avance** mientras suenan (barra animada mientras carga la voz natural). En Ajustes eliges entre las 30 voces de Gemini y ves si estás escuchando la voz natural o la del navegador, y por qué. Las voces son las naturales de Gemini, con la voz del navegador como respaldo. Sin IA, la app sigue funcionando en **modo básico** (20 reglas de errores típicos, dictado, repaso, gramática).
 
 ## Cómo está hecha
 
@@ -43,7 +44,8 @@ tests/             unit (Vitest, 122 pruebas) y e2e (Playwright, 22 pruebas con 
    - El plan gratis de Vercel ejecuta el recordatorio **una vez al día** (19:00 hora de Perú, en `vercel.json`).
    - Para avisar a la hora que elige cada persona: crea una tarea gratis en <https://cron-job.org> que cada hora llame a `https://TU-APP.vercel.app/api/cron-remind?mode=hourly&key=TU_CRON_SECRET`.
    - En iPhone las notificaciones solo funcionan con la app instalada (Compartir → Agregar a inicio).
-5. En el celular abre la URL → **Instalar app / Agregar a pantalla de inicio**.
+5. Comprueba en `https://TU-APP.vercel.app/api/health` que `models.tts` y `models.live` no estén vacíos: si lo están, tu clave no tiene acceso a esos modelos y la app usará la voz del navegador (suena más básica).
+6. En el celular abre la URL → **Instalar app / Agregar a pantalla de inicio**.
 
 Todas las variables están explicadas en `.env.example`.
 

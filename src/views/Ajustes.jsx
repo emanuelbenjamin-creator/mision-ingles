@@ -3,11 +3,13 @@ import { GOALS, LEVELS } from "../content/meta.js";
 import { exportState, importState } from "../lib/storage.js";
 import { addProfessionCards, defaultState } from "../lib/state.js";
 import { PROFESSIONS } from "../content/professions.js";
+import VoicePicker from "../components/VoicePicker.jsx";
+import { getLastFallback, lastEngine } from "../lib/audio.js";
 import { disableReminders, enableReminders, isIOS, pushSupported } from "../lib/push.js";
 import { streak } from "../lib/game.js";
 import { dkey } from "../lib/dates.js";
 
-export default function Ajustes({ s, update, replace, server, onClose, toast }) {
+export default function Ajustes({ s, update, replace, server, onClose, toast, ai }) {
   const [p, setP] = useState({ ...s.profile });
   const [confirmReset, setConfirmReset] = useState(false);
   const [err, setErr] = useState("");
@@ -50,9 +52,15 @@ export default function Ajustes({ s, update, replace, server, onClose, toast }) 
         <div className="field"><label htmlFor="stGoal">Objetivo</label><select id="stGoal" value={p.goal} onChange={e => set({ goal: e.target.value })}>{Object.entries(GOALS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
         <div className="field"><label htmlFor="stProf">Profesión</label><select id="stProf" value={p.profession || "general"} onChange={e => set({ profession: e.target.value })}>{Object.entries(PROFESSIONS).map(([k, v]) => <option key={k} value={k}>{v.name}</option>)}</select></div>
         <div className="field"><label htmlFor="stDaily">Meta diaria</label><select id="stDaily" value={p.dailyGoal} onChange={e => set({ dailyGoal: +e.target.value })}>{[[30, "30 XP · 10 min (relajado)"], [50, "50 XP · 15 min (regular)"], [80, "80 XP · 25 min (serio)"], [120, "120 XP · 40 min (intenso)"]].map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></div>
-        <div className="field"><label htmlFor="stVoice">Voz para escuchar</label><select id="stVoice" value={p.voiceMode === "browser" ? "browser" : p.voice} onChange={e => set(e.target.value === "browser" ? { voiceMode: "browser" } : { voiceMode: "natural", voice: e.target.value })}>
-          <option value="Kore">Natural de Gemini · femenina</option><option value="Puck">Natural de Gemini · masculina</option><option value="Aoede">Natural de Gemini · femenina 2</option><option value="Charon">Natural de Gemini · masculina 2</option><option value="browser">Voz del navegador (sin internet)</option>
-        </select></div>
+        <div className="field">
+          <label>Voz para escuchar</label>
+          <div className="seg" role="group" aria-label="Motor de voz">
+            <button type="button" aria-pressed={p.voiceMode !== "browser"} onClick={() => set({ voiceMode: "natural" })}>Natural de Gemini</button>
+            <button type="button" aria-pressed={p.voiceMode === "browser"} onClick={() => set({ voiceMode: "browser" })}>Del navegador (sin internet)</button>
+          </div>
+          {p.voiceMode !== "browser" && <VoicePicker value={p.voice} onChange={voice => set({ voice })} />}
+          <VoiceStatus natural={p.voiceMode !== "browser"} ai={ai} />
+        </div>
         <div className="field"><label htmlFor="stAccent">Acento</label><select id="stAccent" value={p.accent} onChange={e => set({ accent: e.target.value })}><option value="us">Estadounidense</option><option value="uk">Británico</option></select></div>
         <div className="field"><label htmlFor="stRate">Velocidad de la voz</label><select id="stRate" value={p.rate} onChange={e => set({ rate: +e.target.value })}>{[[0.75, "Lenta"], [0.9, "Normal"], [1, "Nativa"]].map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></div>
         {(server.accessCodeRequired || p.accessCode) && (
@@ -116,4 +124,13 @@ function Reminders({ s, update, server }) {
       {err && <p className="err">{err}</p>}
     </div>
   );
+}
+
+/** Explica qué voz está sonando y, si la natural falló, por qué (para entender por qué suena «básico»). */
+function VoiceStatus({ natural, ai }) {
+  const fb = getLastFallback();
+  if (!natural) return <p className="small muted">Se usa la voz instalada en tu dispositivo. Suena más robótica, pero funciona sin internet.</p>;
+  if (!ai) return <p className="small" style={{ color: "var(--flame)" }}>La voz natural necesita el coach IA activo (clave de Gemini en el servidor). Mientras tanto suena la voz del navegador.</p>;
+  if (fb) return <p className="small" style={{ color: "var(--flame)" }}>La última vez la voz natural falló y se usó la del navegador: «{fb.reason}». Pulsa ▶ en una voz para probar de nuevo.</p>;
+  return <p className="small muted">{lastEngine === "natural" ? "✓ Estás escuchando la voz natural de Gemini." : "Pulsa ▶ para escuchar cada voz antes de elegirla."}</p>;
 }

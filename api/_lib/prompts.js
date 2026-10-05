@@ -91,15 +91,34 @@ Responde en español, en menos de 180 palabras, sin markdown (usa guiones simple
 /* ---------- Voz en vivo (Gemini Live) ---------- */
 export const IELTS_EXAMINER = { id: "ielts", name: "Examinador IELTS", role: "a certified IELTS Speaking examiner" };
 
-export function liveSystem(sc, lv) {
+export const FREE_TALK = { id: "free", name: "Conversación libre", role: "Alex, a friendly and curious English conversation partner" };
+export const TUTOR = { id: "tutor", name: "Profesor de speaking", role: "Sam, a patient English speaking tutor" };
+
+/**
+ * Instrucciones para Gemini Live. opts: { sc, lv, topic, correction: "now"|"end", pace: "slow"|"normal", profession }.
+ */
+export function liveSystem(sc, lv, opts = {}) {
+  const pace = opts.pace === "slow"
+    ? "Speak slowly and very clearly, with short pauses between sentences, using simple words."
+    : "Speak at a natural but clear pace.";
   if (sc.id === "ielts") {
     return `You are a friendly but neutral certified IELTS Speaking examiner. Conduct a realistic IELTS Speaking test in English with a candidate whose native language is Spanish (approximate level ${lv}).
 Part 1: introduce yourself briefly, ask the candidate's name, then 4 short questions about familiar topics (home, work or studies, hobbies). Part 2: give a cue card topic with 3-4 bullet points, tell the candidate they have one minute to prepare, wait until they say they are ready, then let them speak for up to two minutes without interrupting; ask one short follow-up question. Part 3: ask 3 abstract discussion questions related to the Part 2 topic.
 Speak clearly at a natural examiner pace. Do not give feedback or scores during the test. When Part 3 is finished, say "That is the end of the speaking test. Thank you."`;
   }
-  return `You are ${sc.role}. You are having a spoken conversation with an English learner whose native language is Spanish, CEFR level ${lv}. Stay in character and keep it natural.
-Speak clearly, at a pace and with vocabulary adapted to level ${lv}. Keep each turn short (1-3 sentences) and usually end with a question so the learner talks more than you.
-Do not correct every mistake during the conversation. If the learner makes an error that blocks understanding, rephrase their idea correctly in a natural way (recast) and continue. If the learner speaks Spanish, answer in simple English and encourage them to try in English.`;
+  const topic = str(opts.topic, 80).replace(/["<>{}]/g, "");
+  const correct = opts.correction === "now" || sc.id === "tutor"
+    ? "When the learner makes a real mistake, first give a very short correction (for example: \"Small tip: we say 'I am 30 years old'.\"), then continue the conversation naturally. Do not correct small details or pronunciation of names."
+    : "Do not interrupt to correct mistakes. If an error blocks understanding, simply rephrase the idea correctly in your reply (recast) and continue.";
+  const who = sc.id === "free"
+    ? `You are ${sc.role}. Have a relaxed spoken conversation ${topic ? `about "${topic}"` : "about whatever the learner wants (start by asking how their day is going)"}${opts.profession ? `; the learner works in ${opts.profession}` : ""}.`
+    : sc.id === "tutor"
+      ? `You are ${sc.role}. Help the learner practise speaking ${topic ? `about "${topic}"` : "about everyday topics and their work"}: ask open questions, ask them to expand their answers, and teach one useful phrase from time to time.`
+      : `You are ${sc.role}. Stay in character and keep the roleplay natural.`;
+  return `${who}
+The learner's native language is Spanish and their CEFR level is ${lv}. Adapt vocabulary and grammar to that level. ${pace}
+Keep each of your turns short (1-3 sentences) and usually end with a question so the learner talks more than you. ${correct}
+If the learner speaks Spanish, answer in simple English and encourage them to try in English.`;
 }
 
 export function reviewPrompt(sc, lv, turns) {

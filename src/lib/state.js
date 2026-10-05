@@ -10,11 +10,11 @@ export function seedCards() {
 export function defaultState() {
   return {
     v: STATE_VERSION, updatedAt: 0,
-    profile: { name: "", level: "B1", goal: "trabajo", dailyGoal: 50, rate: 0.9, onboarded: false, accessCode: "", voiceMode: "natural", voice: "Kore", accent: "us", profession: "general" },
+    profile: { name: "", level: "B1", goal: "trabajo", dailyGoal: 50, rate: 0.9, onboarded: false, accessCode: "", voiceMode: "natural", voice: "Kore", accent: "us", profession: "general", liveVoice: "Puck" },
     xpByDay: {}, totalXP: 0, gems: 0,
     skills: { pron: null, flu: null, gram: null, vocab: null, comp: null },
     sessions: [], missions: {}, reviewsByDay: {}, newByDay: {},
-    cards: seedCards(), mistakes: [], grammar: {}, badges: {}, speakSeconds: 0, skillSnap: {}, lessons: {}, ielts: [],
+    cards: seedCards(), mistakes: [], grammar: {}, badges: {}, speakSeconds: 0, skillSnap: {}, lessons: {}, ielts: [], liveSessions: [],
   };
 }
 
@@ -26,7 +26,7 @@ export function migrate(raw) {
   s.profile = { ...base.profile, ...raw.profile };
   s.skills = { ...base.skills, ...raw.skills };
   for (const k of ["xpByDay", "missions", "reviewsByDay", "newByDay", "grammar", "badges", "skillSnap", "lessons"]) if (typeof s[k] !== "object" || Array.isArray(s[k]) || !s[k]) s[k] = {};
-  for (const k of ["sessions", "mistakes", "cards", "ielts"]) if (!Array.isArray(s[k])) s[k] = base[k];
+  for (const k of ["sessions", "mistakes", "cards", "ielts", "liveSessions"]) if (!Array.isArray(s[k])) s[k] = base[k];
   // Agrega al mazo las tarjetas nuevas del contenido que aún no existan.
   const ids = new Set(s.cards.map(c => c.id));
   for (const c of base.cards) if (!ids.has(c.id)) s.cards.push(c);

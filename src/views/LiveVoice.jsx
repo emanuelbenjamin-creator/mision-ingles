@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
+import LiveVisualizer from "../components/LiveVisualizer.jsx";
 import { api } from "../lib/api.js";
 import { liveSupported, startLive } from "../lib/live.js";
 import { stopAudio } from "../lib/audio.js";
@@ -8,8 +9,11 @@ import { addMistake, addXP, bumpSkill, completeMission, logSession } from "../li
 const STATE_LABEL = { idle: "Listo para llamar", connecting: "Conectando…", listening: "Te escucha · habla cuando quieras", speaking: "Hablando…", ended: "Llamada terminada" };
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-/** Conversación por voz en tiempo real (Gemini Live) + revisión al final. */
-export default function LiveVoice({ s, update, today, ai, toast, sc }) {
+/**
+ * Conversación por voz en tiempo real (Gemini Live) + revisión al final.
+ * opts: { scenario, topic?, correction?, pace?, voice? }  ·  title: nombre que se muestra.
+ */
+export default function LiveVoice({ s, update, today, ai, toast, opts, title, onLiveChange }) {
   const [status, setStatus] = useState("idle");
   const [turns, setTurns] = useState([]);
   const [secs, setSecs] = useState(0);
@@ -23,6 +27,7 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
   const box = useRef(null);
   const live = status === "connecting" || status === "listening" || status === "speaking";
 
+  useEffect(() => { if (onLiveChange) onLiveChange(live); }, [live, onLiveChange]);
   useEffect(() => () => sess.current && sess.current.stop(), []);
   useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [turns]);
   useEffect(() => {
@@ -35,6 +40,8 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
     return () => clearInterval(id);
   }, [live, status, limit]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const getLevels = useCallback(() => (sess.current && sess.current.levels ? sess.current.levels() : { user: 0, model: 0 }), []);
+
   const onTranscript = (role, text) => setTurns(prev => {
     const last = prev[prev.length - 1];
     if (last && last.role === role) return [...prev.slice(0, -1), { role, text: (last.text + " " + text).replace(/\s+/g, " ").trim() }];
@@ -46,7 +53,7 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
     stopAudio();
     setStatus("connecting");
     try {
-      const t = await api("live-token", { scenario: sc.id, level: s.profile.level, voice: s.profile.voice });
+      const t = await api("live-token", { level: s.profile.level, profession: s.profile.profession, voice: s.profile.liveVoice || s.profile.voice, ...opts });
       setLimit(t.minutes);
       started.current = Date.now();
       sess.current = await startLive({
@@ -62,16 +69,16 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
     }
   };
 
-  const hangUp = () => {
+  function hangUp() {
     if (sess.current) sess.current.stop();
     sess.current = null;
     setStatus("ended");
-  };
+  }
 
   const doReview = async () => {
     setReviewing(true);
     try {
-      const r = await api("chat-review", { scenario: sc.id, level: s.profile.level, turns });
+      const r = await api("chat-review", { scenario: opts.scenario, level: s.profile.level, turns });
       setReview(r);
       const minutes = Math.max(1, Math.round(secs / 60));
       update(d => {
@@ -80,7 +87,8 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
         if (r.grammar != null) bumpSkill(d, "gram", r.grammar);
         if (r.vocabulary != null) bumpSkill(d, "vocab", r.vocabulary);
         d.speakSeconds += Math.round(secs);
-        logSession(d, "live", { scen: sc.id, secs: Math.round(secs) }, today);
+        logSession(d, "live", { scen: opts.scenario, secs: Math.round(secs) }, today);
+        d.liveSessions = [...(d.liveSessions || []), { d: today, title, secs: Math.round(secs), fluency: r.fluency, grammar: r.grammar, errors: r.corrections.length }].slice(-20);
         const msgs = addXP(d, Math.min(20, minutes * 2), today, `${minutes} min de voz en vivo`);
         return secs >= 60 ? msgs.concat(completeMission(d, "chat", "Conversación", today)) : msgs;
       });
@@ -96,7 +104,7 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
       <div className={"live-stage " + status}>
         <div className="live-orb" aria-hidden="true"><Icon name={status === "speaking" ? "headphones" : "mic"} /></div>
         <div style={{ minWidth: 0 }}>
-          <div className="eyebrow">{sc.name}</div>
+          <div className="eyebrow">{title}</div>
           <b>{STATE_LABEL[status]}</b>
           {live && status !== "connecting" && <div className="small muted mono">{mmss(secs)} / {limit}:00</div>}
         </div>
@@ -105,13 +113,14 @@ export default function LiveVoice({ s, update, today, ai, toast, sc }) {
           {live ? <button type="button" className="btn rec" onClick={hangUp}><Icon name="phone" /> Colgar</button>
             : <button type="button" className="btn" onClick={call}><Icon name="phone" /> {status === "ended" ? "Llamar otra vez" : "Iniciar llamada"}</button>}
         </div>
+        <LiveVisualizer getLevels={getLevels} status={status} />
       </div>
       {err && <p className="err">{err}</p>}
       <div className="chat" ref={box} aria-live="polite">
         {turns.length === 0 && <p className="empty">{status === "idle" ? "Usa audífonos para evitar eco. Habla con naturalidad: puedes interrumpir al coach como en una llamada real." : "La transcripción aparece aquí mientras hablan."}</p>}
         {turns.map((t, i) => (
           <div key={i} className={"msg " + (t.role === "user" ? "me" : "ai")}>
-            <span className="who">{t.role === "user" ? "Tú" : sc.name}</span>
+            <span className="who">{t.role === "user" ? "Tú" : title}</span>
             <div className="bub">{t.text}</div>
           </div>
         ))}

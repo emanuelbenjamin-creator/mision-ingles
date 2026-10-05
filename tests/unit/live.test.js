@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import { base64ToFloat32, bytesToBase64, downsample, floatToPcm16 } from "../../src/lib/live.js";
+import { base64ToFloat32, bytesToBase64, downsample, floatToPcm16, rms } from "../../src/lib/live.js";
+import { VOICES } from "../../src/content/voices.js";
 import liveToken from "../../api/_routes/live-token.js";
 import chatReview from "../../api/_routes/chat-review.js";
 import { _setClient, _setGenerator } from "../../api/_lib/gemini.js";
@@ -22,6 +23,14 @@ describe("conversión de audio para Gemini Live", () => {
     expect(Array.from(out).map(x => +x.toFixed(2))).toEqual([0.3, 1]);
     const same = new Float32Array([0.1]);
     expect(downsample(same, 16000, 16000)).toBe(same);
+  });
+  it("rms mide el volumen", () => {
+    expect(rms(new Float32Array([0.5, -0.5, 0.5, -0.5]))).toBeCloseTo(0.5);
+    expect(rms(new Float32Array([]))).toBe(0);
+  });
+  it("catálogo de 30 voces de Gemini sin repetir", () => {
+    expect(VOICES).toHaveLength(30);
+    expect(new Set(VOICES.map(v => v.id)).size).toBe(30);
   });
   it("float → PCM16 recorta a ±1", () => {
     expect(Array.from(floatToPcm16(new Float32Array([0, 1, -1, 2, -3])))).toEqual([0, 32767, -32768, 32767, -32768]);
@@ -54,8 +63,23 @@ describe("API live-token", () => {
     expect(new Date(cfg.expireTime) - Date.now()).toBeGreaterThan(9 * 60 * 1000);
     expect(cfg.liveConnectConstraints.model).toBe("gemini-3.8-live");
     expect(cfg.liveConnectConstraints.config).toMatchObject({ responseModalities: ["AUDIO"], inputAudioTranscription: {}, outputAudioTranscription: {} });
-    expect(cfg.liveConnectConstraints.config.systemInstruction).toContain("CEFR level B2");
+    expect(cfg.liveConnectConstraints.config.systemInstruction).toContain("CEFR level is B2");
     expect(cfg.liveConnectConstraints.config.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Puck");
+  });
+  it("conversación libre con tema, corrección al momento, ritmo lento y cualquier voz de Gemini", async () => {
+    await call(liveToken, { scenario: "free", topic: 'football "and" music', correction: "now", pace: "slow", voice: "Sulafat", profession: "contabilidad" });
+    const cfg = created[0].config.liveConnectConstraints.config;
+    expect(cfg.systemInstruction).toContain('about "football and music"');
+    expect(cfg.systemInstruction).toContain("Small tip");
+    expect(cfg.systemInstruction).toContain("Speak slowly");
+    expect(cfg.systemInstruction).toContain("accounting");
+    expect(cfg.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Sulafat");
+  });
+  it("profesor de speaking y voz desconocida → Kore", async () => {
+    await call(liveToken, { scenario: "tutor", voice: "Hacker" });
+    const cfg = created[0].config.liveConnectConstraints.config;
+    expect(cfg.systemInstruction).toContain("speaking tutor");
+    expect(cfg.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Kore");
   });
   it("modo examinador IELTS", async () => {
     await call(liveToken, { scenario: "ielts" });

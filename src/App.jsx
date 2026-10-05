@@ -8,6 +8,7 @@ import Gramatica from "./views/Gramatica.jsx";
 import Repaso from "./views/Repaso.jsx";
 import Leer from "./views/Leer.jsx";
 import Liga from "./views/Liga.jsx";
+import EnVivo from "./views/EnVivo.jsx";
 import { syncLeague, weekXP } from "./lib/league.js";
 import { reportPractice } from "./lib/push.js";
 import Ajustes from "./views/Ajustes.jsx";
@@ -16,11 +17,11 @@ import { useStore } from "./store.js";
 import { dkey } from "./lib/dates.js";
 import { CORE_MISSIONS, missionDone, streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
-import { configureAudio } from "./lib/audio.js";
+import { configureAudio, setFallbackHandler } from "./lib/audio.js";
 import { addProfessionCards } from "./lib/state.js";
 
-const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"], ["liga", "Liga"]];
-const TAB_IDS = ["hoy", "hablar", "conversar", "leer", "gramatica", "repaso", "liga"];
+const TABS = [["hoy", "Hoy"], ["envivo", "En vivo"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"], ["liga", "Liga"]];
+const TAB_IDS = ["hoy", "envivo", "hablar", "conversar", "leer", "gramatica", "repaso", "liga"];
 const readTab = () => {
   const h = (typeof location !== "undefined" && location.hash.slice(1)) || "";
   if (TAB_IDS.includes(h)) return h;
@@ -39,6 +40,7 @@ export default function App() {
   const today = dkey();
 
   useEffect(() => { health().then(h => setServer({ ...h, checked: true })); }, []);
+  useEffect(() => { setFallbackHandler(reason => toast("Voz natural no disponible ahora: " + reason + " Suena la voz del navegador.")); }, [toast]);
   useEffect(() => { setAccessCode(s.profile.accessCode); }, [s.profile.accessCode]);
   useEffect(() => { try { sessionStorage.setItem("mi-tab", nav.tab); } catch { /* sin almacenamiento */ } }, [nav.tab]);
   useEffect(() => {
@@ -100,6 +102,7 @@ export default function App() {
           <section className="view" key={nav.tab}>
             <ErrorBoundary resetKey={nav.tab}>
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} />}
+            {nav.tab === "envivo" && <EnVivo {...common} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
             {nav.tab === "leer" && <Leer {...common} mode={nav.leerMode} setMode={leerMode => setNav(n => ({ ...n, leerMode }))} />}
@@ -111,7 +114,7 @@ export default function App() {
         )}
       </main>
 
-      {settings && <Ajustes s={s} update={update} replace={replace} server={server} toast={toast} onClose={() => setSettings(false)} />}
+      {settings && <Ajustes s={s} update={update} replace={replace} server={server} toast={toast} ai={ai} onClose={() => setSettings(false)} />}
       {toasts.length > 0 && <div className="toast" role="status">{toasts[0]}</div>}
     </>
   );

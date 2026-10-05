@@ -65,7 +65,7 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen, 
           <button type="button" aria-pressed={mode === "chat"} onClick={() => setMode("chat")}>Chat</button>
           <button type="button" aria-pressed={mode === "voice"} onClick={() => setMode("voice")}>Voz en vivo</button>
         </div>
-        {mode === "voice" ? <LiveVoice s={s} update={update} today={today} ai={ai} toast={toast} sc={voiceSc} /> : <>
+        {mode === "voice" ? <LiveVoice s={s} update={update} today={today} ai={ai} toast={toast} opts={{ scenario: voiceSc.id }} title={voiceSc.name} /> : <>
         <div className="card-head" style={{ margin: 0 }}>
           <h2>{sc.name}</h2>
           <span className={"pill " + (count >= GOAL_TURNS ? "ok" : "neutral")}>{Math.min(count, GOAL_TURNS)} / {GOAL_TURNS} intercambios</span>

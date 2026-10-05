@@ -45,6 +45,14 @@ export function base64ToFloat32(b64) {
   return out;
 }
 
+/** Volumen (RMS) de un bloque de audio, 0–1. */
+export function rms(f32) {
+  if (!f32 || !f32.length) return 0;
+  let sum = 0;
+  for (let i = 0; i < f32.length; i++) sum += f32[i] * f32[i];
+  return Math.sqrt(sum / f32.length);
+}
+
 export const liveSupported = () => typeof window !== "undefined" && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.AudioContext && window.AudioWorkletNode);
 
 const WORKLET = `class PcmCapture extends AudioWorkletProcessor {
@@ -62,6 +70,11 @@ export async function startLive({ token, model, config, onTranscript, onState, o
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: "v1alpha" } });
 
   const outCtx = new AudioContext({ sampleRate: 24000 });
+  const analyser = outCtx.createAnalyser();
+  analyser.fftSize = 512;
+  analyser.connect(outCtx.destination);
+  const outBuf = new Float32Array(analyser.fftSize);
+  let userLevel = 0;
   const sources = new Set();
   let playHead = 0, closed = false, muted = false;
   const flush = () => { sources.forEach(s => { try { s.stop(); } catch { /* ya terminó */ } }); sources.clear(); playHead = 0; onState("listening"); };
@@ -72,7 +85,7 @@ export async function startLive({ token, model, config, onTranscript, onState, o
     buf.copyToChannel(f, 0);
     const src = outCtx.createBufferSource();
     src.buffer = buf;
-    src.connect(outCtx.destination);
+    src.connect(analyser);
     const t = Math.max(outCtx.currentTime + 0.02, playHead);
     src.start(t);
     playHead = t + buf.duration;
@@ -121,6 +134,7 @@ export async function startLive({ token, model, config, onTranscript, onState, o
   let pending = [], pendingLen = 0;
   const chunk = Math.round(inCtx.sampleRate * 0.1); // envía cada 100 ms
   node.port.onmessage = ev => {
+    userLevel = muted ? 0 : userLevel * 0.6 + rms(ev.data) * 0.4;
     if (closed || muted) return;
     pending.push(ev.data);
     pendingLen += ev.data.length;
@@ -144,5 +158,11 @@ export async function startLive({ token, model, config, onTranscript, onState, o
   return {
     stop() { if (closed) return; closed = true; try { session.close(); } catch { /* cerrado */ } cleanup(); },
     setMuted(v) { muted = v; },
+    /** Niveles actuales (0–1) para el visualizador: tu voz y la del coach. */
+    levels() {
+      if (closed) return { user: 0, model: 0 };
+      analyser.getFloatTimeDomainData(outBuf);
+      return { user: Math.min(1, userLevel * 5), model: Math.min(1, rms(outBuf) * 5) };
+    },
   };
 }

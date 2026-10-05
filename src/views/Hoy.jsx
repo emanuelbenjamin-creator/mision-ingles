@@ -87,6 +87,10 @@ export default function Hoy({ s, today, go, league, server = {} }) {
               </button>
             ) : <button type="button" className="ielts-chip" onClick={() => go({ tab: "hablar", mode: "ielts" })}>Haz un simulacro IELTS Speaking (+40 XP)</button>}
           </div>
+          <button type="button" className="live-cta" onClick={() => go({ tab: "envivo" })} data-testid="live-cta">
+            <span className="live-cta-orb"><Icon name="mic" /></span>
+            <span><b>Habla en vivo con Gemini</b><span className="small"> Una llamada real con voz natural: conversación libre, profesor, juegos de roles o examen IELTS.</span></span>
+          </button>
           {server.leagues && (
             <button type="button" className="league-chip" onClick={() => go({ tab: "liga" })} data-testid="league-chip">
               {league ? <><span><b>Liga {league.division}</b><span className="small muted"> · puesto {league.myRank} de {league.rows.length}</span></span><span className={"pill " + (league.rows[league.myRank - 1]?.zone === "up" ? "ok" : league.rows[league.myRank - 1]?.zone === "down" ? "bad" : "neutral")}>{league.rows[league.myRank - 1]?.zone === "up" ? "Zona de ascenso" : league.rows[league.myRank - 1]?.zone === "down" ? "Zona de descenso" : "Sigue sumando"}</span></>

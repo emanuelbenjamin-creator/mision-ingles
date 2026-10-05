@@ -342,3 +342,61 @@ test("una lectura con formato inválido no rompe la pantalla (usa la lectura bas
   await expect(page.getByTestId("reading").locator(".para").first()).toBeVisible(); // lectura base del nivel
   await expect(page.getByText("Algo salió mal")).toHaveCount(0);
 });
+
+function wav(seconds) {
+  const pcm = Buffer.alloc(24000 * 2 * seconds);
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0); h.writeUInt32LE(36 + pcm.length, 4); h.write("WAVE", 8); h.write("fmt ", 12); h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(24000, 24); h.writeUInt32LE(48000, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34);
+  h.write("data", 36); h.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([h, pcm]);
+}
+
+test("botón de audio: se pone verde con barra de avance y usa la voz natural", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/tts", route => route.fulfill({ status: 200, contentType: "audio/wav", body: wav(3) }));
+  await onboard(page);
+  await page.getByRole("tab", { name: "Gramática" }).click();
+  const btn = page.locator(".examples li").first().getByRole("button");
+  await btn.click();
+  await expect(btn).toHaveClass(/playing/);
+  await expect(btn).toHaveAttribute("data-engine", "natural");
+  await page.waitForTimeout(900);
+  const p = await btn.evaluate(el => Number(getComputedStyle(el).getPropertyValue("--p")));
+  expect(p).toBeGreaterThan(0.1);
+  expect(await btn.evaluate(el => getComputedStyle(el).borderTopColor)).not.toBe(await page.locator(".examples li").nth(1).getByRole("button").evaluate(el => getComputedStyle(el).borderTopColor));
+});
+
+test("si la voz natural falla, avisa el motivo y Ajustes lo muestra", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/tts", route => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ code: "quota", error: "Se acabó la cuota gratuita de hoy del coach IA." }) }));
+  await onboard(page);
+  await page.getByRole("tab", { name: "Gramática" }).click();
+  await page.locator(".examples li").first().getByRole("button").click();
+  await expect(page.locator(".toast")).toContainText("Voz natural no disponible", { timeout: 15000 });
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Se acabó la cuota gratuita");
+});
+
+test("En vivo: panel dedicado con modos, tema, voz y llamada", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/tts", route => route.fulfill({ status: 200, contentType: "audio/wav", body: wav(2) }));
+  let tokenReq;
+  await page.route("**/api/live-token", route => { tokenReq = route.request().postDataJSON(); return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ code: "no_ai", error: "Prueba sin servidor real." }) }); });
+  await onboard(page);
+  await page.getByTestId("live-cta").click();
+  await expect(page.getByRole("heading", { name: "Habla en vivo" })).toBeVisible();
+  const setup = page.getByTestId("live-setup");
+  await setup.getByRole("button", { name: /Profesor de speaking/ }).click();
+  await setup.getByRole("button", { name: "Football" }).click();
+  await setup.getByRole("button", { name: "Lento y claro" }).click();
+  await setup.getByRole("button", { name: "Masculinas" }).click();
+  await setup.getByRole("radio", { name: /Charon/ }).click();
+  await expect(setup).toContainText("Charon · Informativo");
+  const prev = setup.getByRole("button", { name: "Escuchar Charon" });
+  await prev.click();
+  await expect(setup.getByRole("button", { name: "Detener Charon" })).toHaveClass(/playing/);
+  await page.getByRole("button", { name: "Iniciar llamada" }).click();
+  await expect(page.locator(".err")).toContainText("Prueba sin servidor real.");
+  expect(tokenReq).toMatchObject({ scenario: "tutor", topic: "Football", pace: "slow", correction: "now", voice: "Charon", level: expect.any(String) });
+});

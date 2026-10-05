@@ -180,8 +180,6 @@ textarea { min-height: 150px; resize: vertical; }
 .pair { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 12px; font-weight: 700; background: var(--surface); }
 .pair .pairbtn { border: 0; background: var(--surface-2); color: var(--ink); border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; }
 .pair .pairbtn svg { width: 15px; height: 15px; }
-.pair .pairbtn.playing { background: var(--accent); color: var(--accent-ink); }
-.btn.playing { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .sentences { display: grid; gap: 12px; }
 .sent { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
 .sent .en { font-size: 1.125rem; font-weight: 700; }
@@ -307,3 +305,37 @@ em.down { color: var(--bad); font-style: normal; font-weight: 700; }
 .league-chip { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; color: var(--ink); }
 .risk { padding: 12px 16px; border-radius: var(--r); background: var(--flame-soft); color: var(--flame); }
 .composer.tall textarea { min-height: 120px; height: auto; }
+
+/* Botones de audio: verdes con barra de reproducción mientras suenan */
+.audio-btn { position: relative; overflow: hidden; isolation: isolate; }
+.audio-btn.playing, .audio-btn.loading { color: var(--good); border-color: var(--good); background: var(--good-soft); }
+.audio-btn.playing::before { content: ""; position: absolute; inset: 0; z-index: -1; transform-origin: left; transform: scaleX(var(--p, 0)); background: color-mix(in srgb, var(--good) 28%, transparent); }
+.audio-btn.playing::after, .audio-btn.loading::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+.audio-btn.playing::after { background: var(--good); transform-origin: left; transform: scaleX(var(--p, 0)); }
+.audio-btn.loading::after { background: linear-gradient(90deg, transparent, var(--good), transparent); background-size: 50% 100%; background-repeat: no-repeat; animation: audio-load 1s linear infinite; }
+@keyframes audio-load { from { background-position: -50% 0; } to { background-position: 150% 0; } }
+.pair .pairbtn.playing, .pair .pairbtn.loading { color: var(--good); background: conic-gradient(var(--good) calc(var(--p, 0) * 360deg), var(--good-soft) 0); }
+.pair .pairbtn.playing svg { color: var(--surface); }
+.pair .pairbtn.playing::before, .pair .pairbtn.playing::after { display: none; }
+@media (prefers-reduced-motion: reduce) { .audio-btn.loading::after { animation: none; background: var(--good); opacity: .5; } }
+/* Selector de voces */
+.vp { display: grid; gap: 10px; }
+.vp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.vp-item { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 12px; padding: 4px 4px 4px 0; background: var(--surface); }
+.vp-item.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.vp-pick { flex: 1; min-width: 0; text-align: left; border: 0; background: none; padding: 6px 10px; display: grid; }
+.vp-pick b { font-size: .95rem; }
+.vp-pick span { font-size: .8rem; color: var(--muted); }
+.vp-item.on .vp-pick b { color: var(--accent); }
+.vp-play { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); display: grid; place-items: center; padding: 0; }
+.vp-play svg { width: 15px; height: 15px; }
+/* En vivo */
+.live-viz { width: 100%; height: 72px; display: block; flex-basis: 100%; }
+fieldset.live-setup { margin: 0; min-width: 0; display: grid; gap: 14px; }
+fieldset.live-setup:disabled { opacity: .6; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.live-cta { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: center; text-align: left; width: 100%; border: 0; border-radius: var(--r); padding: 14px 16px; background: var(--ink); color: var(--bg); }
+.live-cta .small { display: block; color: color-mix(in srgb, var(--bg) 75%, transparent); margin-top: 2px; }
+.live-cta-orb { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); }
+.live-cta-orb svg { width: 22px; height: 22px; }
+.live-cta:hover .live-cta-orb { transform: scale(1.06); }

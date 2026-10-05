@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Icon from "./Icon.jsx";
+import { useProgressVar } from "./SpeakButton.jsx";
 import { canRecord, startRecording } from "../lib/recorder.js";
 import { getAudioState, stopAudio, subscribeAudio, toggleClip } from "../lib/audio.js";
 import { api } from "../lib/api.js";
@@ -10,6 +11,9 @@ export default function RecordRow({ target, id, ai, level, toast, onResult }) {
   const [clip, setClip] = useState(null);
   const [busy, setBusy] = useState(false);
   const st = useSyncExternalStore(subscribeAudio, getAudioState);
+  const clipId = "clip:" + id;
+  const playing = st.id === clipId && st.status !== "idle";
+  const clipRef = useProgressVar(playing);
   const urlRef = useRef(null);
   useEffect(() => () => { if (urlRef.current) URL.revokeObjectURL(urlRef.current); }, []);
   if (!canRecord()) return null;
@@ -33,14 +37,12 @@ export default function RecordRow({ target, id, ai, level, toast, onResult }) {
     catch (e) { toast(e.message); }
     setBusy(false);
   };
-  const clipId = "clip:" + id;
-  const playing = st.id === clipId && st.status !== "idle";
 
   return (
     <div className="row">
       {rec ? <button type="button" className="btn rec sm" onClick={() => rec.stop()}><Icon name="stop" /> Detener grabación</button>
         : <button type="button" className="btn ghost sm" onClick={start}><Icon name="rec" /> {clip ? "Grabar otra vez" : "Grábate"}</button>}
-      {clip && !rec && <button type="button" className={"btn ghost sm" + (playing ? " playing" : "")} onClick={() => toggleClip(clip.url, clipId)}><Icon name={playing ? "stop" : "play"} /> {playing ? "Detener" : "Tu voz"}</button>}
+      {clip && !rec && <button ref={clipRef} type="button" className={"audio-btn btn ghost sm" + (playing ? " playing" : "")} onClick={() => toggleClip(clip.url, clipId)}><Icon name={playing ? "stop" : "play"} /> {playing ? "Detener" : "Tu voz"}</button>}
       {clip && !rec && ai && <button type="button" className="btn sm" onClick={evaluate} disabled={busy}>{busy ? "Escuchando…" : "Evaluar con IA"}</button>}
     </div>
   );

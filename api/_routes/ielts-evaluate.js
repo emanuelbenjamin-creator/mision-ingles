@@ -1,7 +1,7 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { str, ieltsPrompt, normalizeIelts } from "./_lib/prompts.js";
-import { ieltsOverall } from "../src/lib/ielts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { str, ieltsPrompt, normalizeIelts } from "../_lib/prompts.js";
+import { ieltsOverall } from "../../src/lib/ielts.js";
 
 const EXAMINER = "You are a strict, fair, certified IELTS Speaking examiner. Explanations for the candidate are in Spanish.";
 

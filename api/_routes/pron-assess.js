@@ -1,6 +1,6 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, str, level, pronPrompt, normalizePron } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, str, level, pronPrompt, normalizePron } from "../_lib/prompts.js";
 
 /* Gemini escucha tu grabación (WAV en base64) y evalúa la pronunciación palabra por palabra. */
 export default endpoint(async body => {

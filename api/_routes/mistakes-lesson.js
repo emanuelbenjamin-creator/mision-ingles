@@ -1,6 +1,6 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, str, level, lessonPrompt, normalizeLesson } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, str, level, lessonPrompt, normalizeLesson } from "../_lib/prompts.js";
 
 /* Lección personalizada a partir de los errores guardados en el cuaderno. */
 export default endpoint(async body => {

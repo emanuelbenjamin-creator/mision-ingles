@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
 import { base64ToFloat32, bytesToBase64, downsample, floatToPcm16 } from "../../src/lib/live.js";
-import liveToken from "../../api/live-token.js";
-import chatReview from "../../api/chat-review.js";
+import liveToken from "../../api/_routes/live-token.js";
+import chatReview from "../../api/_routes/chat-review.js";
 import { _setClient, _setGenerator } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 

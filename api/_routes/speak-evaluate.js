@@ -1,6 +1,6 @@
-import { endpoint } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, str, level, goal, required, speakPrompt, normalizeSpeak } from "./_lib/prompts.js";
+import { endpoint } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, str, level, goal, required, speakPrompt, normalizeSpeak } from "../_lib/prompts.js";
 
 export default endpoint(async body => {
   const text = str(body.text, 4000);

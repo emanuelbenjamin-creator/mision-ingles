@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import reading from "../../api/reading.js";
-import word from "../../api/word.js";
-import dictation from "../../api/dictation.js";
+import reading from "../../api/_routes/reading.js";
+import word from "../../api/_routes/word.js";
+import dictation from "../../api/_routes/dictation.js";
 import { _setGenerator } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 import { addCard } from "../../src/lib/game.js";

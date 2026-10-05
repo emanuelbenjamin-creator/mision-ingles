@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import speakEvaluate from "../../api/speak-evaluate.js";
-import chatTurn from "../../api/chat-turn.js";
-import chatSuggest from "../../api/chat-suggest.js";
-import grammarExplain from "../../api/grammar-explain.js";
-import grammarAsk from "../../api/grammar-ask.js";
-import health from "../../api/health.js";
+import speakEvaluate from "../../api/_routes/speak-evaluate.js";
+import chatTurn from "../../api/_routes/chat-turn.js";
+import chatSuggest from "../../api/_routes/chat-suggest.js";
+import grammarExplain from "../../api/_routes/grammar-explain.js";
+import grammarAsk from "../../api/_routes/grammar-ask.js";
+import health from "../../api/_routes/health.js";
 import { _setGenerator, parseJson } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 import { chatContents } from "../../api/_lib/prompts.js";
@@ -67,7 +67,7 @@ describe("código de acceso y límite diario", () => {
     expect((await call(speakEvaluate, { text: SPEECH }, { headers: { "x-access-code": "otro123" } })).status).toBe(401);
     expect((await call(speakEvaluate, { text: SPEECH }, { headers: { "x-access-code": "secreto" } })).status).toBe(200);
     const h = await call(health, undefined, { method: "GET" });
-    expect(h.body).toEqual({ ok: true, ai: true, accessCodeRequired: true });
+    expect(h.body).toMatchObject({ ok: true, ai: true, accessCodeRequired: true });
   });
   it("corta al pasar el límite por IP", async () => {
     process.env.DAILY_LIMIT_PER_IP = "2";

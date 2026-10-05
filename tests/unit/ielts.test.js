@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
 import { clampBand, ieltsOverall } from "../../src/lib/ielts.js";
 import { IELTS_SETS } from "../../src/content/ielts.js";
-import ieltsEvaluate from "../../api/ielts-evaluate.js";
+import ieltsEvaluate from "../../api/_routes/ielts-evaluate.js";
 import { _setGenerator } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 

@@ -17,6 +17,8 @@
   --bad-soft: #FAE3E0;
   --good: #1D7F46;
   --good-soft: #DDF3E5;
+  --bronze: #9A5A26;
+  --sapphire: #2A63C8;
   --shadow: 0 1px 2px rgba(20, 32, 51, .06), 0 4px 16px rgba(20, 32, 51, .05);
   --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -27,14 +29,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0E141C; --surface: #161F2A; --surface-2: #1E2936; --ink: #E6ECF3; --muted: #9AA8B9; --line: #2A3747;
     --accent: #3CC4A2; --accent-ink: #062720; --accent-soft: #123A32; --flame: #F2B84B; --flame-fill: #E9A92C; --flame-soft: #3A2C10;
-    --bad: #F08A80; --bad-soft: #3D1F1D; --good: #62D394; --good-soft: #143523;
+    --bad: #F08A80; --bad-soft: #3D1F1D; --good: #62D394; --good-soft: #143523; --bronze: #D69A66; --sapphire: #7FA8F0;
     --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0E141C; --surface: #161F2A; --surface-2: #1E2936; --ink: #E6ECF3; --muted: #9AA8B9; --line: #2A3747;
   --accent: #3CC4A2; --accent-ink: #062720; --accent-soft: #123A32; --flame: #F2B84B; --flame-fill: #E9A92C; --flame-soft: #3A2C10;
-  --bad: #F08A80; --bad-soft: #3D1F1D; --good: #62D394; --good-soft: #143523;
+  --bad: #F08A80; --bad-soft: #3D1F1D; --good: #62D394; --good-soft: #143523; --bronze: #D69A66; --sapphire: #7FA8F0;
   --shadow: 0 1px 2px rgba(0, 0, 0, .3); color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -287,3 +289,19 @@ em.down { color: var(--bad); font-style: normal; font-weight: 700; }
 .bands { display: grid; gap: 10px; }
 .band-row { border-bottom: 1px solid var(--line); padding-bottom: 8px; display: grid; gap: 4px; }
 .ielts-chip { margin-top: 12px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface-2); border-radius: 10px; padding: 8px 12px; color: var(--ink); }
+/* Liga */
+.board { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.board li { display: grid; grid-template-columns: 2.5ch minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; border-left: 3px solid transparent; }
+.board li.up { border-left-color: var(--good); }
+.board li.down { border-left-color: var(--bad); }
+.board li.me { background: var(--accent-soft); font-weight: 700; }
+.board .nk { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .xp { color: var(--muted); }
+.zone-dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
+.zone-dot.up { background: var(--good); }
+.zone-dot.down { background: var(--bad); }
+.div-badge { display: inline-flex; align-items: center; gap: 6px; }
+.div-badge svg { width: 22px; height: 22px; }
+.div-badge.bronce { color: var(--bronze); } .div-badge.plata { color: var(--muted); } .div-badge.oro { color: var(--flame); }
+.div-badge.zafiro { color: var(--sapphire); } .div-badge.diamante { color: var(--accent); }
+.league-chip { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; color: var(--ink); }

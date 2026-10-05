@@ -1,6 +1,6 @@
-import { endpoint } from "./_lib/http.js";
-import { createLiveToken } from "./_lib/gemini.js";
-import { level, scenarioById, liveSystem, IELTS_EXAMINER } from "./_lib/prompts.js";
+import { endpoint } from "../_lib/http.js";
+import { createLiveToken } from "../_lib/gemini.js";
+import { level, scenarioById, liveSystem, IELTS_EXAMINER } from "../_lib/prompts.js";
 
 const VOICES = ["Kore", "Puck", "Aoede", "Charon"];
 

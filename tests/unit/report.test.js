@@ -4,8 +4,8 @@ import { ensureWeekSnap, weekStart, weeklyReport } from "../../src/lib/report.js
 import { addProfessionCards, defaultState, migrate } from "../../src/lib/state.js";
 import { scenariosFor, todaysScenario, topicsFor } from "../../src/lib/missions.js";
 import { PROFESSIONS } from "../../src/content/professions.js";
-import lesson from "../../api/mistakes-lesson.js";
-import chatTurn from "../../api/chat-turn.js";
+import lesson from "../../api/_routes/mistakes-lesson.js";
+import chatTurn from "../../api/_routes/chat-turn.js";
 import { _setGenerator } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 

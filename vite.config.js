@@ -12,7 +12,8 @@ function devApi() {
         const m = req.url && req.url.match(/^\/api\/([a-z-]+)(?:\?.*)?$/);
         if (!m) return next();
         try {
-          const mod = await server.ssrLoadModule(`/api/${m[1]}.js`);
+          const mod = await server.ssrLoadModule("/api/[route].js");
+          req.query = { route: m[1] };
           await mod.default(req, res);
         } catch (e) {
           res.statusCode = 404;

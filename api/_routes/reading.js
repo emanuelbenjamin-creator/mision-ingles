@@ -1,6 +1,6 @@
-import { endpoint } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, level, profession, readingPrompt, normalizeReading } from "./_lib/prompts.js";
+import { endpoint } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, level, profession, readingPrompt, normalizeReading } from "../_lib/prompts.js";
 
 /* Lectura graduada nueva según nivel y profesión. */
 export default endpoint(async body => {

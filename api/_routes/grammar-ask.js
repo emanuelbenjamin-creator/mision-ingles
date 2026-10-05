@@ -1,6 +1,6 @@
-import { endpoint } from "./_lib/http.js";
-import { generate } from "./_lib/gemini.js";
-import { COACH, str, level, required, askPrompt } from "./_lib/prompts.js";
+import { endpoint } from "../_lib/http.js";
+import { generate } from "../_lib/gemini.js";
+import { COACH, str, level, required, askPrompt } from "../_lib/prompts.js";
 
 export default endpoint(async body => {
   const q = str(body.question, 1500);

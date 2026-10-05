@@ -4,16 +4,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/*.js": {
-      "maxDuration": 30
-    },
-    "api/pron-assess.js": {
-      "maxDuration": 60
-    },
-    "api/reading.js": {
-      "maxDuration": 60
-    },
-    "api/ielts-evaluate.js": {
+    "api/[route].js": {
       "maxDuration": 60
     }
   }

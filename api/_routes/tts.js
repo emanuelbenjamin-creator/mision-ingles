@@ -1,7 +1,7 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { synthesize } from "./_lib/gemini.js";
-import { pcmToWav } from "./_lib/audio.js";
-import { str } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { synthesize } from "../_lib/gemini.js";
+import { pcmToWav } from "../_lib/audio.js";
+import { str } from "../_lib/prompts.js";
 
 const VOICES = ["Kore", "Puck", "Aoede", "Charon"];
 const STYLE = {

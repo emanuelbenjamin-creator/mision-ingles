@@ -12,7 +12,7 @@ import { levelIdx, levelProgress } from "../lib/level.js";
 
 const SKILLS = [["pron", "Pronunciación"], ["flu", "Fluidez"], ["gram", "Gramática"], ["vocab", "Vocabulario"], ["comp", "Comprensión"]];
 
-export default function Hoy({ s, today, go }) {
+export default function Hoy({ s, today, go, league, server = {} }) {
   const xp = s.xpByDay[today] || 0, goal = s.profile.dailyGoal;
   const st = streak(s, today);
   const weekXP = [...Array(7)].reduce((a, _, i) => a + (s.xpByDay[addDays(today, -i)] || 0), 0);
@@ -85,6 +85,12 @@ export default function Hoy({ s, today, go }) {
               </button>
             ) : <button type="button" className="ielts-chip" onClick={() => go({ tab: "hablar", mode: "ielts" })}>Haz un simulacro IELTS Speaking (+40 XP)</button>}
           </div>
+          {server.leagues && (
+            <button type="button" className="league-chip" onClick={() => go({ tab: "liga" })} data-testid="league-chip">
+              {league ? <><span><b>Liga {league.division}</b><span className="small muted"> · puesto {league.myRank} de {league.rows.length}</span></span><span className={"pill " + (league.rows[league.myRank - 1]?.zone === "up" ? "ok" : league.rows[league.myRank - 1]?.zone === "down" ? "bad" : "neutral")}>{league.rows[league.myRank - 1]?.zone === "up" ? "Zona de ascenso" : league.rows[league.myRank - 1]?.zone === "down" ? "Zona de descenso" : "Sigue sumando"}</span></>
+                : <><b>Únete a la liga semanal</b><span className="pill">Competir</span></>}
+            </button>
+          )}
           <div className="card">
             <div className="card-head"><h2>Habilidades</h2><span className="small muted">0–100</span></div>
             <div className="meters">{SKILLS.map(([k, l]) => <Meter key={k} label={l} value={s.skills[k]} />)}</div>

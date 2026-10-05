@@ -1,6 +1,6 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, str, level, scenarioById, reviewPrompt, normalizeReview, IELTS_EXAMINER } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, str, level, scenarioById, reviewPrompt, normalizeReview, IELTS_EXAMINER } from "../_lib/prompts.js";
 
 /* Revisión de una conversación por voz: correcciones y puntajes a partir de la transcripción. */
 export default endpoint(async body => {

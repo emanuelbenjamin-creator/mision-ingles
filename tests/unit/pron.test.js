@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
 import { encodeWav } from "../../src/lib/recorder.js";
-import pronAssess from "../../api/pron-assess.js";
+import pronAssess from "../../api/_routes/pron-assess.js";
 import { _setGenerator } from "../../api/_lib/gemini.js";
 import { _resetRateLimit } from "../../api/_lib/http.js";
 

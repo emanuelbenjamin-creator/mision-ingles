@@ -1,6 +1,6 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate } from "./_lib/gemini.js";
-import { COACH, str, level, explainPrompt } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate } from "../_lib/gemini.js";
+import { COACH, str, level, explainPrompt } from "../_lib/prompts.js";
 
 export default endpoint(async body => {
   const options = Array.isArray(body.options) ? body.options.slice(0, 5).map(o => str(o, 80)) : [];

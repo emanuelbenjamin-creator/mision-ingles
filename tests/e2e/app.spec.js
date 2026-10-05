@@ -284,3 +284,30 @@ test("simulacro IELTS completo: graba la Part 2 y muestra las bandas", async ({ 
   await page.getByRole("tab", { name: "Hoy" }).click();
   await expect(page.locator(".ielts-chip")).toContainText("6.5");
 });
+
+test("liga: unirse con apodo y ver la clasificación", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/health", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, ai: true, accessCodeRequired: false, leagues: true }) }));
+  const view = me => ({ division: "Plata", divIndex: 1, week: "2026-10-05", nick: "Ana_Lima", last: "up", myRank: 2,
+    rows: [{ rank: 1, nick: "Leo", xp: 120, me: false, zone: "up" }, { rank: 2, nick: "Ana_Lima", xp: me, me: true, zone: "up" }, { rank: 3, nick: "Sol", xp: 10, me: false, zone: "" }] });
+  const calls = [];
+  await page.route("**/api/league", route => {
+    const b = route.request().postDataJSON();
+    calls.push(b);
+    if (b.action === "join") return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ playerId: "abcdefabcdef", secret: "s3cr3t", ...view(0) }) });
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(view(b.weekXP)) });
+  });
+  await onboard(page);
+  await expect(page.getByTestId("league-chip")).toContainText("Únete a la liga semanal");
+  await page.getByTestId("league-chip").click();
+  await page.getByLabel("Tu apodo en la liga").fill("Ana_Lima");
+  await page.getByRole("button", { name: "Unirme a la liga" }).click();
+  await expect(page.getByTestId("league")).toContainText("Plata");
+  await expect(page.getByTestId("league")).toContainText("Puesto 2 de 3");
+  await expect(page.getByTestId("league")).toContainText("¡Subiste de división");
+  await expect(page.locator(".board li.me")).toContainText("Ana_Lima (tú)");
+  expect(calls[0]).toMatchObject({ action: "join", nickname: "Ana_Lima" });
+  await page.getByRole("tab", { name: "Hoy" }).click();
+  await expect(page.getByTestId("league-chip")).toContainText("Liga Plata");
+  await expect(page.getByTestId("league-chip")).toContainText("Zona de ascenso");
+});

@@ -6,6 +6,8 @@ import Conversar from "./views/Conversar.jsx";
 import Gramatica from "./views/Gramatica.jsx";
 import Repaso from "./views/Repaso.jsx";
 import Leer from "./views/Leer.jsx";
+import Liga from "./views/Liga.jsx";
+import { syncLeague, weekXP } from "./lib/league.js";
 import Ajustes from "./views/Ajustes.jsx";
 import Onboarding from "./views/Onboarding.jsx";
 import { useStore } from "./store.js";
@@ -15,7 +17,7 @@ import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio } from "./lib/audio.js";
 import { addProfessionCards } from "./lib/state.js";
 
-const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"]];
+const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"], ["liga", "Liga"]];
 const readTab = () => { try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; } };
 
 export default function App() {
@@ -26,6 +28,7 @@ export default function App() {
   const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
+  const [league, setLeague] = useState(null);
   const today = dkey();
 
   useEffect(() => { health().then(h => setServer({ ...h, checked: true })); }, []);
@@ -43,7 +46,14 @@ export default function App() {
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };
   const xp = s.xpByDay[today] || 0;
   const aiLabel = !server.checked ? "Coach IA: conectando…" : ai ? "Coach IA activo" : server.ai ? "Falta código de acceso" : "Modo básico (sin IA)";
-  const common = { s, update, today, ai, toast };
+  const wxp = weekXP(s, today);
+  const leagueCreds = s.league;
+  const refreshLeague = useCallback(() => {
+    if (!server.leagues || !leagueCreds) return;
+    syncLeague(leagueCreds, wxp).then(setLeague).catch(e => { if (e.code === "bad_player") update(d => { delete d.league; return ["Tu liga se reinició: vuelve a unirte."]; }); });
+  }, [server.leagues, leagueCreds, wxp, update]);
+  useEffect(() => { const id = setTimeout(refreshLeague, 1500); return () => clearTimeout(id); }, [refreshLeague]);
+  const common = { s, update, today, ai, toast, server };
 
   return (
     <>
@@ -73,12 +83,13 @@ export default function App() {
           <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; addProfessionCards(d); return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
         ) : (
           <section className="view" key={nav.tab}>
-            {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} />}
+            {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
             {nav.tab === "leer" && <Leer {...common} mode={nav.leerMode} setMode={leerMode => setNav(n => ({ ...n, leerMode }))} />}
             {nav.tab === "gramatica" && <Gramatica {...common} topic={nav.topic} setTopic={topic => setNav(n => ({ ...n, topic }))} />}
             {nav.tab === "repaso" && <Repaso {...common} />}
+            {nav.tab === "liga" && <Liga {...common} league={league} setLeague={setLeague} refresh={refreshLeague} />}
           </section>
         )}
       </main>

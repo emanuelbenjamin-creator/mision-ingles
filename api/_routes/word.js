@@ -1,6 +1,6 @@
-import { endpoint, HttpError } from "./_lib/http.js";
-import { generate, parseJson } from "./_lib/gemini.js";
-import { COACH, str, wordPrompt } from "./_lib/prompts.js";
+import { endpoint, HttpError } from "../_lib/http.js";
+import { generate, parseJson } from "../_lib/gemini.js";
+import { COACH, str, wordPrompt } from "../_lib/prompts.js";
 
 /* Traducción en contexto de una palabra tocada en la lectura. */
 export default endpoint(async body => {

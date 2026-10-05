@@ -1,0 +1,28 @@
+{
+  "name": "mision-ingles",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Coach de inglés para hispanohablantes: misiones diarias, habla con corrección, pronunciación, conversación, gramática y repaso espaciado.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "oxlint src api tests",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@google/genai": "^2.27.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.86.0",
+    "vite": "^8.3.2",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^5.0.3"
+  }
+}

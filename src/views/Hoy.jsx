@@ -78,6 +78,12 @@ export default function Hoy({ s, today, go }) {
             <div className="path">{LEVELS.map((l, i) => <div key={l} className={"step" + (i < li ? " past" : i === li ? " now" : "")}>{l}</div>)}</div>
             <div style={{ marginTop: 14 }}><Meter label={"Avance en " + s.profile.level} value={lp} /></div>
             <p className="small muted" style={{ marginTop: 8 }}>Combina la gramática dominada del nivel, tus puntajes de habla y el vocabulario aprendido.</p>
+            {s.ielts.length > 0 ? (
+              <button type="button" className="ielts-chip" onClick={() => go({ tab: "hablar", mode: "ielts" })}>
+                Último simulacro IELTS: <b className="mono">{Number(s.ielts.at(-1).overall).toFixed(1)}</b>
+                {s.ielts.length > 1 && <em className={s.ielts.at(-1).overall >= s.ielts.at(-2).overall ? "up" : "down"}> {s.ielts.at(-1).overall >= s.ielts.at(-2).overall ? "▲" : "▼"} {Math.abs(s.ielts.at(-1).overall - s.ielts.at(-2).overall).toFixed(1)}</em>}
+              </button>
+            ) : <button type="button" className="ielts-chip" onClick={() => go({ tab: "hablar", mode: "ielts" })}>Haz un simulacro IELTS Speaking (+40 XP)</button>}
           </div>
           <div className="card">
             <div className="card-head"><h2>Habilidades</h2><span className="small muted">0–100</span></div>

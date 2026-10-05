@@ -244,3 +244,43 @@ test("reporte semanal y lección con tus errores", async ({ page }) => {
   await expect(page.getByTestId("lesson").locator(".opt.right")).toHaveCount(3);
   await expect(page.getByTestId("xp-chip")).toContainText("15 /");
 });
+
+test("simulacro IELTS completo: graba la Part 2 y muestra las bandas", async ({ page }) => {
+  let sent;
+  await mockApi(page);
+  await page.route("**/api/ielts-evaluate", route => {
+    sent = route.request().postDataJSON();
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+      bands: { fc: 6, lr: 6.5, gra: 6, p: 6.5 }, overall: 6.5, pronunciationFromAudio: true,
+      criteria_es: { fc: "Hablas con fluidez razonable.", lr: "Buen vocabulario.", gra: "Algunos errores.", p: "Clara." },
+      corrections: [{ original: "people is", corrected: "people are", explanation_es: "plural", rule: "People es plural" }], better_phrases: [{ instead: "very good", try: "outstanding" }], next_steps_es: ["Usa más conectores."] }) });
+  });
+  await onboard(page);
+  await page.getByRole("tab", { name: "Hablar" }).click();
+  await page.getByRole("button", { name: "Simulacro IELTS" }).click();
+  await page.getByRole("button", { name: "Empezar Part 1" }).click();
+  const answer = "Well, I live in an apartment in Lima with my family and I really like it because it is close to my work.";
+  for (let i = 0; i < 4; i++) {
+    await page.locator("#ieltsAns").fill(answer);
+    await page.getByRole("button", { name: i < 3 ? "Siguiente" : "Ir a la Part 2" }).click();
+  }
+  await expect(page.locator(".cue")).toBeVisible();
+  await page.getByRole("button", { name: "Estoy listo" }).click();
+  await expect(page.locator(".pill", { hasText: "Grabando" })).toBeVisible();
+  await page.locator("#ieltsP2").fill(answer + " " + answer);
+  await page.waitForTimeout(1200);
+  await page.getByRole("button", { name: "Terminar Part 2" }).click();
+  for (let i = 0; i < 3; i++) {
+    await page.locator("#ieltsAns").fill(answer);
+    await page.getByRole("button", { name: i < 2 ? "Siguiente" : "Terminar examen" }).click();
+  }
+  await page.getByRole("button", { name: "Ver mi banda IELTS" }).click();
+  await expect(page.getByTestId("ielts-result")).toContainText("6.5");
+  await expect(page.getByTestId("ielts-result")).toContainText("Lexical Resource");
+  expect(sent.part1).toHaveLength(4);
+  expect(sent.part3).toHaveLength(3);
+  expect(sent.part2.a).toContain("apartment");
+  expect(Buffer.from(sent.audio, "base64").toString("ascii", 0, 4)).toBe("RIFF");
+  await page.getByRole("tab", { name: "Hoy" }).click();
+  await expect(page.locator(".ielts-chip")).toContainText("6.5");
+});

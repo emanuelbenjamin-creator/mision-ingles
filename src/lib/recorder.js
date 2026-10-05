@@ -21,7 +21,7 @@ export function encodeWav(pcm16, rate = 16000) {
  * Empieza a grabar. Devuelve { stop(), done } donde done resuelve con
  * { url, wavBase64, seconds } (url sirve para escucharte).
  */
-export async function startRecording({ maxMs = 8000 } = {}) {
+export async function startRecording({ maxMs = 8000, rate = 16000 } = {}) {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
   const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find(t => window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
   const rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
@@ -35,8 +35,8 @@ export async function startRecording({ maxMs = 8000 } = {}) {
         const ctx = new AudioContext();
         const audio = await ctx.decodeAudioData(await blob.arrayBuffer());
         ctx.close();
-        const pcm = floatToPcm16(downsample(audio.getChannelData(0), audio.sampleRate, 16000));
-        const wav = encodeWav(pcm, 16000);
+        const pcm = floatToPcm16(downsample(audio.getChannelData(0), audio.sampleRate, rate));
+        const wav = encodeWav(pcm, rate);
         resolve({ url: URL.createObjectURL(new Blob([wav], { type: "audio/wav" })), wavBase64: bytesToBase64(wav), seconds: audio.duration });
       } catch (e) { reject(e); }
     };

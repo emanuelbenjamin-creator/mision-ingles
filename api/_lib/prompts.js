@@ -209,3 +209,38 @@ export function normalizeLesson(o) {
     exercises,
   };
 }
+
+/* ---------- Simulacro IELTS ---------- */
+export function ieltsPrompt(set, hasAudio) {
+  const p1 = set.part1.map((x, i) => `Q${i + 1}: ${x.q}\nA: ${x.a || "(no answer)"}`).join("\n");
+  const p3 = set.part3.map((x, i) => `Q${i + 1}: ${x.q}\nA: ${x.a || "(no answer)"}`).join("\n");
+  return `You are a certified IELTS Speaking examiner. Rate this candidate (native Spanish speaker) using the official public band descriptors. The answers are speech-to-text transcripts, so ignore punctuation and capitalization.${hasAudio ? " The attached audio is the candidate's Part 2 long turn: use it to judge Pronunciation (and fluency features such as pauses and hesitation)." : " There is no audio: estimate Pronunciation conservatively from the transcripts and say so."}
+
+PART 1
+${p1}
+
+PART 2 — Topic: ${set.part2.topic}
+Answer (transcript): ${set.part2.a || "(see audio)"}
+
+PART 3
+${p3}
+
+Reply with ONLY a JSON object:
+{"bands":{"fc":0-9,"lr":0-9,"gra":0-9,"p":0-9},"criteria_es":{"fc":"justificación breve en español de Fluency and Coherence","lr":"... Lexical Resource","gra":"... Grammatical Range and Accuracy","p":"... Pronunciation"},"corrections":[{"original":"candidate's words","corrected":"better version","explanation_es":"explicación breve","rule":"nombre corto"}],"better_phrases":[{"instead":"what the candidate said","try":"a higher-band alternative"}],"next_steps_es":["paso concreto 1","paso concreto 2","paso concreto 3"]}
+Bands in 0.5 steps. Max 6 corrections and 4 better_phrases. Be realistic, not generous.`;
+}
+
+export function normalizeIelts(o) {
+  const b = (o && o.bands) || {};
+  const band = x => { const n = Number(x); return Number.isFinite(n) ? Math.max(0, Math.min(9, Math.round(n * 2) / 2)) : null; };
+  const bands = { fc: band(b.fc), lr: band(b.lr), gra: band(b.gra), p: band(b.p) };
+  if (Object.values(bands).some(v => v == null)) throw new HttpError(502, "invalid_json", "La evaluación llegó incompleta. Inténtalo otra vez.");
+  const c = (o && o.criteria_es) || {};
+  return {
+    bands,
+    criteria_es: { fc: str(c.fc, 500), lr: str(c.lr, 500), gra: str(c.gra, 500), p: str(c.p, 500) },
+    corrections: arr(o && o.corrections, 6).map(x => ({ original: str(x && x.original, 300), corrected: str(x && x.corrected, 300), explanation_es: str(x && x.explanation_es, 300), rule: str(x && x.rule, 60) })).filter(x => x.original && x.corrected),
+    better_phrases: arr(o && o.better_phrases, 4).map(x => ({ instead: str(x && x.instead, 200), try: str(x && x.try, 200) })).filter(x => x.try),
+    next_steps_es: arr(o && o.next_steps_es, 4).map(x => str(x, 300)).filter(Boolean),
+  };
+}

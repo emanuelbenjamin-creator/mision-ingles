@@ -30,6 +30,7 @@ export default defineConfig({
     devApi(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "Misión Inglés",
@@ -46,12 +47,10 @@ export default defineConfig({
           { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
-      workbox: {
-        navigateFallbackDenylist: [/^\/api\//],
-        runtimeCaching: [
-          { urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\/.*/, handler: "CacheFirst", options: { cacheName: "fonts", expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 } } },
-        ],
-      },
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "sw.js",
+      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"] },
     }),
   ],
   test: { include: ["tests/unit/**/*.test.js"], environment: "node" },

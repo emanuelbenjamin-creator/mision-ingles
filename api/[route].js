@@ -2,6 +2,7 @@ import { send } from "./_lib/http.js";
 import chatReview from "./_routes/chat-review.js";
 import chatSuggest from "./_routes/chat-suggest.js";
 import chatTurn from "./_routes/chat-turn.js";
+import cronRemind from "./_routes/cron-remind.js";
 import dictation from "./_routes/dictation.js";
 import grammarAsk from "./_routes/grammar-ask.js";
 import grammarExplain from "./_routes/grammar-explain.js";
@@ -11,6 +12,7 @@ import league from "./_routes/league.js";
 import liveToken from "./_routes/live-token.js";
 import mistakesLesson from "./_routes/mistakes-lesson.js";
 import pronAssess from "./_routes/pron-assess.js";
+import pushSubscribe from "./_routes/push-subscribe.js";
 import reading from "./_routes/reading.js";
 import speakEvaluate from "./_routes/speak-evaluate.js";
 import tts from "./_routes/tts.js";
@@ -24,6 +26,7 @@ export const ROUTES = {
   "chat-review": chatReview,
   "chat-suggest": chatSuggest,
   "chat-turn": chatTurn,
+  "cron-remind": cronRemind,
   "dictation": dictation,
   "grammar-ask": grammarAsk,
   "grammar-explain": grammarExplain,
@@ -33,6 +36,7 @@ export const ROUTES = {
   "live-token": liveToken,
   "mistakes-lesson": mistakesLesson,
   "pron-assess": pronAssess,
+  "push-subscribe": pushSubscribe,
   "reading": reading,
   "speak-evaluate": speakEvaluate,
   "tts": tts,

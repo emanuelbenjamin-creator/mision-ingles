@@ -40,7 +40,7 @@ function Answer({ question, value, onChange }) {
         <SpeakButton text={question} iconOnly />
         <h2 style={{ flex: 1, minWidth: 0 }}>{question}</h2>
       </div>
-      <div className="composer" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+      <div className="composer tall" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
         <textarea id="ieltsAns" value={value} onChange={e => onChange(e.target.value)} placeholder="Responde hablando (micrófono) o dicta con el teclado. Unas 2–4 frases." aria-label="Tu respuesta" />
         <MicButton label="" maxMs={90000} onStart={() => { base.current = value ? value.trim() + " " : ""; }} onText={t => onChange(base.current + t)} />
       </div>
@@ -153,7 +153,7 @@ export default function IeltsMock({ s, update, today, ai, toast }) {
               <button type="button" className="btn" onClick={finishTalk}>Terminar Part 2</button>
             </div>
             {notes && <p className="small muted">Tus notas: {notes}</p>}
-            <div className="composer" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+            <div className="composer tall" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
               <textarea id="ieltsP2" value={p2} onChange={e => setP2(e.target.value)} placeholder="Habla sin parar. Si tu navegador lo permite, pulsa el micrófono para ver el texto; si no, se evalúa con el audio grabado." aria-label="Tu respuesta de la Part 2" />
               <MicButton label="" maxMs={125000} onStart={() => { base2.current = p2 ? p2.trim() + " " : ""; }} onText={t => setP2(base2.current + t)} />
             </div>
@@ -207,7 +207,7 @@ export default function IeltsMock({ s, update, today, ai, toast }) {
           <div className="card-head"><h2>Tus simulacros</h2><span className="small muted">banda global</span></div>
           {s.ielts.length ? (
             <div className="mistakes">{s.ielts.slice(-6).reverse().map((x, i) => (
-              <div className="mk row" key={i} style={{ justifyContent: "space-between" }}><span className="small muted">{x.d}</span><b className="mono">{Number(x.overall).toFixed(1)}</b></div>
+              <div className="mk" key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><span className="small muted">{x.d}</span><b className="mono">{Number(x.overall).toFixed(1)}</b></div>
             ))}</div>
           ) : <p className="empty">Aquí verás tu banda en cada simulacro.</p>}
         </div>

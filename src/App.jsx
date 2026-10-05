@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import Icon from "./components/Icon.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import Hoy from "./views/Hoy.jsx";
 import Hablar from "./views/Hablar.jsx";
 import Conversar from "./views/Conversar.jsx";
@@ -8,17 +9,23 @@ import Repaso from "./views/Repaso.jsx";
 import Leer from "./views/Leer.jsx";
 import Liga from "./views/Liga.jsx";
 import { syncLeague, weekXP } from "./lib/league.js";
+import { reportPractice } from "./lib/push.js";
 import Ajustes from "./views/Ajustes.jsx";
 import Onboarding from "./views/Onboarding.jsx";
 import { useStore } from "./store.js";
 import { dkey } from "./lib/dates.js";
-import { streak } from "./lib/game.js";
+import { CORE_MISSIONS, missionDone, streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio } from "./lib/audio.js";
 import { addProfessionCards } from "./lib/state.js";
 
 const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"], ["liga", "Liga"]];
-const readTab = () => { try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; } };
+const TAB_IDS = ["hoy", "hablar", "conversar", "leer", "gramatica", "repaso", "liga"];
+const readTab = () => {
+  const h = (typeof location !== "undefined" && location.hash.slice(1)) || "";
+  if (TAB_IDS.includes(h)) return h;
+  try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; }
+};
 
 export default function App() {
   const [toasts, setToasts] = useState([]);
@@ -53,6 +60,14 @@ export default function App() {
     syncLeague(leagueCreds, wxp).then(setLeague).catch(e => { if (e.code === "bad_player") update(d => { delete d.league; return ["Tu liga se reinició: vuelve a unirte."]; }); });
   }, [server.leagues, leagueCreds, wxp, update]);
   useEffect(() => { const id = setTimeout(refreshLeague, 1500); return () => clearTimeout(id); }, [refreshLeague]);
+  const remindersOn = !!(s.reminders && s.reminders.enabled);
+  const streakNow = streak(s, today);
+  const missionsLeft = CORE_MISSIONS.filter(id => !missionDone(s, id, today)).length;
+  useEffect(() => {
+    if (!remindersOn || !(s.xpByDay[today] > 0)) return undefined;
+    const id = setTimeout(() => { reportPractice({ lastDay: today, streak: streakNow, missionsLeft }).catch(() => {}); }, 2000);
+    return () => clearTimeout(id);
+  }, [remindersOn, today, s.xpByDay, streakNow, missionsLeft]);
   const common = { s, update, today, ai, toast, server };
 
   return (
@@ -83,6 +98,7 @@ export default function App() {
           <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; addProfessionCards(d); return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
         ) : (
           <section className="view" key={nav.tab}>
+            <ErrorBoundary resetKey={nav.tab}>
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
@@ -90,6 +106,7 @@ export default function App() {
             {nav.tab === "gramatica" && <Gramatica {...common} topic={nav.topic} setTopic={topic => setNav(n => ({ ...n, topic }))} />}
             {nav.tab === "repaso" && <Repaso {...common} />}
             {nav.tab === "liga" && <Liga {...common} league={league} setLeague={setLeague} refresh={refreshLeague} />}
+            </ErrorBoundary>
           </section>
         )}
       </main>

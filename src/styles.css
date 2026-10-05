@@ -305,3 +305,5 @@ em.down { color: var(--bad); font-style: normal; font-weight: 700; }
 .div-badge.bronce { color: var(--bronze); } .div-badge.plata { color: var(--muted); } .div-badge.oro { color: var(--flame); }
 .div-badge.zafiro { color: var(--sapphire); } .div-badge.diamante { color: var(--accent); }
 .league-chip { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; color: var(--ink); }
+.risk { padding: 12px 16px; border-radius: var(--r); background: var(--flame-soft); color: var(--flame); }
+.composer.tall textarea { min-height: 120px; height: auto; }

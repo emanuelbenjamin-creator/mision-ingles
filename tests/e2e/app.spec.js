@@ -311,3 +311,34 @@ test("liga: unirse con apodo y ver la clasificación", async ({ page }) => {
   await expect(page.getByTestId("league-chip")).toContainText("Liga Plata");
   await expect(page.getByTestId("league-chip")).toContainText("Zona de ascenso");
 });
+
+test("recordatorios: activar desde Ajustes registra la suscripción", async ({ page }) => {
+  await page.addInitScript(() => {
+    const fakeSub = { toJSON: () => ({ endpoint: "https://push.example/abc", keys: { p256dh: "k", auth: "a" } }), unsubscribe: async () => true };
+    const reg = { pushManager: { getSubscription: async () => null, subscribe: async () => fakeSub } };
+    Object.defineProperty(navigator, "serviceWorker", { value: { ready: Promise.resolve(reg), register: async () => reg, addEventListener() {}, controller: null }, configurable: true });
+    window.PushManager = window.PushManager || function () {};
+    window.Notification = Object.assign(function () {}, { permission: "default", requestPermission: async () => "granted" });
+  });
+  await mockApi(page);
+  await page.route("**/api/health", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, ai: true, accessCodeRequired: false, leagues: true, push: true, vapidPublicKey: "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U" }) }));
+  let sub;
+  await page.route("**/api/push-subscribe", route => { sub = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }); });
+  await onboard(page);
+  await page.getByRole("button", { name: "Ajustes" }).click();
+  await page.getByTestId("reminders").locator("select").selectOption("20");
+  await page.getByTestId("reminders").getByRole("button", { name: "Activar" }).click();
+  await expect(page.getByTestId("reminders")).toContainText("a las 20:00");
+  expect(sub).toMatchObject({ action: "subscribe", hour: 20, subscription: { endpoint: "https://push.example/abc" } });
+  expect(sub.tz).toBeTruthy();
+});
+
+test("una lectura con formato inválido no rompe la pantalla (usa la lectura base)", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/reading", route => route.fulfill({ status: 200, contentType: "application/json", body: "{}" }));
+  await onboard(page);
+  await page.getByRole("tab", { name: "Escuchar y leer" }).click();
+  await page.getByRole("button", { name: "Lectura" }).click();
+  await expect(page.getByTestId("reading").locator(".para").first()).toBeVisible(); // lectura base del nivel
+  await expect(page.getByText("Algo salió mal")).toHaveCount(0);
+});

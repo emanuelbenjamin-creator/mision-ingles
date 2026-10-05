@@ -11,6 +11,7 @@ import { addCard, bumpSkill, completeMission, logSession } from "../lib/game.js"
 
 const readCache = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 const writeCache = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ } };
+const validStory = r => !!(r && typeof r.text === "string" && r.text.trim() && Array.isArray(r.glossary) && Array.isArray(r.questions) && r.questions.every(q => q && Array.isArray(q.o)));
 const clean = w => w.toLowerCase().replace(/^[^a-z']+|[^a-z']+$/g, "");
 
 export default function Leer(props) {
@@ -107,17 +108,18 @@ function Lectura({ s, update, today, ai, toast }) {
     const st = STORIES[band(s.profile.level)];
     return { title: st.title, text: st.text, glossary: st.glossary, questions: st.questions, offline: true };
   }, [s.profile.level]);
-  const [story, setStory] = useState(() => readCache(key) || fallback);
+  const [story, setStory] = useState(() => { const c = readCache(key); return validStory(c) ? c : fallback; });
   const [loading, setLoading] = useState(false);
   const [sel, setSel] = useState(null); // { word, sentence, es, ipa, example, loading }
   const [answers, setAnswers] = useState({});
 
   const load = async (force = false) => {
     if (!ai) return;
-    if (!force && readCache(key)) return;
+    if (!force && validStory(readCache(key))) return;
     setLoading(true);
     try {
       const r = await api("reading", { level: s.profile.level, profession: s.profile.profession, seed: force ? String(Date.now()) : today });
+      if (!validStory(r)) throw new Error("La lectura llegó incompleta. Inténtalo otra vez.");
       writeCache(key, r);
       setStory(r); setAnswers({}); setSel(null);
     } catch (e) { if (force) toast(e.message); }

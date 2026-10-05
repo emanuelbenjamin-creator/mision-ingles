@@ -25,9 +25,11 @@ export default function Hoy({ s, today, go, league, server = {} }) {
   const topRules = Object.entries(ruleCount).sort((a, b) => b[1] - a[1]).slice(0, 4);
   const noSkills = Object.values(s.skills).every(v => v == null);
   const date = new Date().toLocaleDateString("es-PE", { weekday: "long", day: "numeric", month: "long" });
+  const atRisk = st > 0 && !(xp > 0) && new Date().getHours() >= 18;
 
   return (
     <>
+      {atRisk && <div className="risk" role="status"><b>🔥 Tu racha de {st} {st === 1 ? "día" : "días"} está en peligro.</b> Completa una misión antes de medianoche.</div>}
       <div className="card hero">
         <div style={{ display: "grid", gap: 10, minWidth: 0 }}>
           <span className="eyebrow">{date} · {GOALS[s.profile.goal]}</span>

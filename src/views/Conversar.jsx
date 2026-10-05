@@ -116,7 +116,7 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen, 
         </div>
         <div className="card" style={{ display: "grid", gap: 8 }}>
           <h3>Cómo practicar</h3>
-          <p className="muted small">{mode === "voice" ? "Una llamada real con el coach: habla y escucha sin escribir. Al colgar, pulsa «Revisar mi conversación» para ver tus errores y sumar XP." : null}{mode === "voice" ? <br /> : null}Responde con frases completas. Después de cada mensaje verás si hubo un error y cómo decirlo mejor; los errores van a tu cuaderno de repaso. Pulsa «Escuchar» para oír la respuesta e imitar la entonación.</p>
+          <p className="muted small">{mode === "voice" ? "Una llamada real con el coach: habla y escucha sin escribir. Al colgar, pulsa «Revisar mi conversación» para ver tus errores y sumar XP. Con 1 minuto o más completas la misión de conversación." : <>Responde con frases completas. Después de cada mensaje verás si hubo un error y cómo decirlo mejor; los errores van a tu cuaderno de repaso. Pulsa «Escuchar» para oír la respuesta e imitar la entonación.</>}</p>
         </div>
       </div>
     </div>

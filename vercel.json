@@ -7,5 +7,11 @@
     "api/[route].js": {
       "maxDuration": 60
     }
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron-remind",
+      "schedule": "0 0 * * *"
+    }
+  ]
 }

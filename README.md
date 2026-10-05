@@ -1,56 +1,59 @@
 # Misión Inglés
 
-Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne lo mejor de Stimuler, Duolingo, ELSA y Anki:
+Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne lo mejor de Stimuler, Duolingo, ELSA, Speak y Anki, **usando solo modelos gratuitos de Google**.
 
 | Sección | Qué hace |
 |---|---|
-| **Hoy** | Panel con meta diaria de XP, racha, gráfico de 14 días, ruta MCER (A1–C2), habilidades, errores frecuentes y logros |
-| **Misiones diarias** | Habla 60 s · sonido del día · tema de gramática · repaso de tarjetas · bonus de conversación |
-| **Hablar** | Hablas 60 s sobre un tema → puntajes de fluidez, gramática, vocabulario y coherencia, errores corregidos con la regla en español y una versión mejorada que puedes escuchar |
-| **Pronunciación** | Sonidos difíciles para hispanohablantes (/θ/, ship–sheep, v–b, «estudent», -ed…), pares mínimos y frases para imitar con puntaje por palabra |
-| **Conversar** | Juegos de roles (entrevista, cafetería, aeropuerto, médico, cliente, colega) con corrección en cada mensaje |
-| **Gramática** | 10 temas por nivel con explicación, fórmula, ejemplos con audio, ejercicios, «Explica mi respuesta» y «Pregúntale al profe» |
-| **Repaso** | Tarjetas con repetición espaciada (falsos amigos, phrasal verbs, colocaciones) y cuaderno de errores: **cada error corregido se vuelve tarjeta** |
+| **Hoy** | Meta diaria de XP, racha, gráfico de 14 días, ruta MCER, habilidades, **reporte semanal**, liga, último IELTS, errores frecuentes y logros |
+| **Misiones diarias** | 4 principales (habla 60 s, sonido del día, gramática, repaso) + bonus (conversación, dictado, lectura) |
+| **Hablar** | Habla 60 s con evaluación (fluidez, gramática, vocabulario, coherencia), **pronunciación grabando tu voz** (Gemini escucha y marca cada palabra) y **simulacro IELTS Speaking** con las 4 bandas oficiales |
+| **Conversar** | Chat con corrección en cada mensaje **o voz en vivo con Gemini Live** (llamada real, transcripción y revisión al colgar), incluido un examinador IELTS |
+| **Escuchar y leer** | Dictado con frases de tu nivel y lecturas graduadas: tocas una palabra para traducirla y agregarla a tus tarjetas |
+| **Gramática** | 10 temas con ejercicios, «Explica mi respuesta» y «Pregúntale al profe» |
+| **Repaso** | Repetición espaciada, cuaderno de errores y **lección semanal creada con tus errores** |
+| **Liga** | Ligas semanales Bronce → Diamante: los 5 primeros suben y los 5 últimos bajan |
+| **Profesión** | Vocabulario, temas y conversaciones de Contabilidad y tributos, Ventas, Tecnología, Salud o Turismo |
+| **Recordatorios** | Notificación si tu racha está en riesgo |
 
-Sin IA (o sin conexión con el coach), la app sigue funcionando en **modo básico**: detecta 20 errores típicos de hispanohablantes, mide palabras por minuto y muletillas, y mantiene el repaso, la pronunciación y la gramática.
+Todos los botones de audio cambian a **Detener** mientras suenan. Las voces son las naturales de Gemini, con la voz del navegador como respaldo. Sin IA, la app sigue funcionando en **modo básico** (20 reglas de errores típicos, dictado, repaso, gramática).
 
 ## Cómo está hecha
 
-- **Frontend**: React 19 + Vite 8 + `vite-plugin-pwa`. El progreso se guarda en el dispositivo; en *Ajustes* puedes descargar y restaurar una copia de seguridad (JSON).
-- **IA**: Gemini, llamado solo desde funciones serverless en `api/`. La clave **nunca** llega al navegador. Prueba una cadena de modelos: si uno falla o está saturado, pasa al siguiente.
-- **Voz**: gratis, en el navegador. Para hablar usa Web Speech API (Chrome, Edge, Android y Safari) y, como respaldo, el micrófono del teclado del celular. Para escuchar usa `speechSynthesis`.
-- **No necesita Supabase.** Solo haría falta para tener login y sincronizar entre dispositivos (ver `PLAN.md`, fase 2).
+- **Frontend**: React 19 + Vite 8 + PWA (service worker propio en `src/sw.js` para trabajar sin conexión y recibir notificaciones). El progreso se guarda en el dispositivo y se puede respaldar en Ajustes.
+- **API**: una sola función serverless (`api/[route].js`) que despacha a `api/_routes/*`. El plan gratis de Vercel admite máximo 12 funciones.
+- **IA, solo gratuita**: Gemini 3 Flash, 3.1 Flash-Lite, 2.5 Flash y 2.5 Flash-Lite **se lanzan a la vez y gana la primera respuesta válida**. Los modelos que no existen para tu clave se descartan solos. Si uno se queda sin cuota, descansa 1 minuto. Si todos fallan, se usa Gemma.
+- **Gemini Live**: el servidor crea un token temporal de un uso y el navegador conecta directo. La clave nunca sale del servidor.
+- **Ligas y recordatorios**: Upstash Redis (capa gratuita) + Web Push con claves VAPID.
 
 ```
-api/            funciones serverless: speak-evaluate, chat-turn, chat-suggest, grammar-explain, grammar-ask, health
-src/content/    contenido: temas, sonidos, escenarios, gramática, mazo
-src/lib/        lógica pura: srs, rules, align, analyze, game, missions, storage, speech, api
-src/views/      pantallas: Hoy, Hablar, Pronunciacion, Conversar, Gramatica, Repaso, Ajustes, Onboarding
-prototype/      primer prototipo de un solo archivo (referencia)
-tests/          unit (Vitest) y e2e (Playwright)
+api/[route].js     router único        api/_routes/   un archivo por endpoint
+api/_lib/          gemini (carrera de modelos), prompts, league, push, store, http
+src/content/       temas, sonidos, escenarios, gramática, mazo, profesiones, dictado, lecturas, IELTS
+src/lib/           srs, rules, align, game, missions, report, audio, live, recorder, league, push…
+src/views/         Hoy, Hablar, Speak60, Pronunciacion, IeltsMock, Conversar, LiveVoice, Leer, Gramatica, Repaso, Liga, Ajustes, Onboarding
+tests/             unit (Vitest, 122 pruebas) y e2e (Playwright, 22 pruebas con micrófono simulado)
 ```
 
-## Desplegar en Vercel (gratis, ~5 minutos)
+## Desplegar en Vercel (gratis)
 
-1. Crea una **clave de Gemini** en <https://aistudio.google.com/apikey>.
-2. Entra a <https://vercel.com> con tu cuenta de GitHub → **Add New… → Project** → importa `mision-ingles` (Vercel detecta Vite solo).
-3. En **Environment Variables** agrega:
-   - `GEMINI_API_KEY` = tu clave (obligatoria)
-   - `APP_ACCESS_CODE` = un código para que solo tú y tus alumnos usen el coach IA (opcional, recomendado)
-   - `DAILY_LIMIT_PER_IP` = consultas al coach por día y por IP (opcional, por defecto 80)
-   - `GEMINI_MODELS` = cadena de modelos (opcional; ver `.env.example`)
-4. **Deploy**. Cada push a `main` vuelve a desplegar.
-5. En el celular, abre la URL → menú del navegador → **Instalar app / Agregar a pantalla de inicio**.
+1. **Clave de Gemini**: créala en <https://aistudio.google.com/apikey>, en un proyecto **sin facturación**, así nunca te cobran. En la capa gratuita Google puede usar los datos para mejorar sus productos.
+2. **Vercel**: Add New → Project → importa `mision-ingles` → en *Environment Variables* agrega `GEMINI_API_KEY` (y opcionalmente `APP_ACCESS_CODE`) → Deploy.
+3. **Ligas y recordatorios** (opcional): en el proyecto de Vercel ve a **Storage → Marketplace → Upstash (Redis) → Connect**. Crea `KV_REST_API_URL` y `KV_REST_API_TOKEN` solas.
+4. **Notificaciones** (opcional): en tu computadora ejecuta `npx web-push generate-vapid-keys`. Copia la clave pública en `VAPID_PUBLIC_KEY` y la privada en `VAPID_PRIVATE_KEY`, y agrega `VAPID_SUBJECT=mailto:tu-correo` y `CRON_SECRET` (cualquier texto largo y secreto). Vuelve a desplegar.
+   - El plan gratis de Vercel ejecuta el recordatorio **una vez al día** (19:00 hora de Perú, en `vercel.json`).
+   - Para avisar a la hora que elige cada persona: crea una tarea gratis en <https://cron-job.org> que cada hora llame a `https://TU-APP.vercel.app/api/cron-remind?mode=hourly&key=TU_CRON_SECRET`.
+   - En iPhone las notificaciones solo funcionan con la app instalada (Compartir → Agregar a inicio).
+5. En el celular abre la URL → **Instalar app / Agregar a pantalla de inicio**.
 
-¿Quieres que aparezca en Google Sites? Agrega un botón o enlace a la URL de Vercel. No conviene incrustarla dentro de Sites, porque ahí el micrófono queda bloqueado.
+Todas las variables están explicadas en `.env.example`.
 
 ## Desarrollo local
 
 ```bash
 npm install
 cp .env.example .env      # pon tu GEMINI_API_KEY
-npm run dev               # la app y /api/* en http://localhost:5173
-npm test                  # pruebas unitarias y de la API (Gemini simulado)
-npm run test:e2e          # Playwright: recorre las 5 misiones con la API simulada
+npm run dev               # app + /api en http://localhost:5173
+npm test                  # Vitest (Gemini, Redis y push simulados)
+npm run test:e2e          # Playwright con API simulada y micrófono falso
 npm run lint
 ```

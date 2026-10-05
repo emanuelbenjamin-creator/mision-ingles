@@ -126,3 +126,25 @@ test("sin IA la app sigue funcionando en modo básico", async ({ page }) => {
   await expect(page.getByTestId("speak-feedback")).toContainText("people are");
   await expect(page.getByTestId("speak-feedback")).toContainText("for 3 years");
 });
+
+test("el botón de audio cambia a Detener mientras suena y vuelve a Escuchar", async ({ page }) => {
+  const pcm = Buffer.alloc(24000 * 2 * 3); // 3 s de silencio
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0); h.writeUInt32LE(36 + pcm.length, 4); h.write("WAVE", 8); h.write("fmt ", 12); h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22); h.writeUInt32LE(24000, 24); h.writeUInt32LE(48000, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34);
+  h.write("data", 36); h.writeUInt32LE(pcm.length, 40);
+  let ttsCalls = 0;
+  await mockApi(page);
+  await page.route("**/api/tts", route => { ttsCalls++; return route.fulfill({ status: 200, contentType: "audio/wav", body: Buffer.concat([h, pcm]) }); });
+  await onboard(page);
+  await page.getByRole("tab", { name: "Gramática" }).click();
+  const btn = page.locator(".examples li").first().getByRole("button");
+  await btn.click();
+  await expect(btn).toHaveAttribute("aria-label", "Detener");
+  await expect(btn).toHaveClass(/playing/);
+  await btn.click();
+  await expect(btn).toHaveAttribute("aria-label", "Escuchar");
+  await btn.click(); // segunda vez: sale de la caché, sin llamar otra vez al servidor
+  await expect(btn).toHaveAttribute("aria-label", "Detener");
+  expect(ttsCalls).toBe(1);
+});

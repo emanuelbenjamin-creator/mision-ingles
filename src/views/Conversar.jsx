@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import Icon from "../components/Icon.jsx";
+import SpeakButton from "../components/SpeakButton.jsx";
 import MicButton from "../components/MicButton.jsx";
 import { SCENARIOS } from "../content/scenarios.js";
 import { todaysScenario } from "../lib/missions.js";
-import { speak } from "../lib/speech.js";
 import { api } from "../lib/api.js";
 import { addMistake, completeMission, logSession } from "../lib/game.js";
 
@@ -68,7 +67,7 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen }
             <div className="msg ai" key={i}>
               <span className="who">{who(sc)}</span>
               <div className="bub">{t.content}</div>
-              <button className="btn ghost sm" type="button" style={{ justifySelf: "start" }} onClick={() => speak(t.content, s.profile.rate)}><Icon name="play" /> Escuchar</button>
+              <SpeakButton text={t.content} style={{ justifySelf: "start" }} />
             </div>
           ) : (
             <div className="msg me" key={i}>

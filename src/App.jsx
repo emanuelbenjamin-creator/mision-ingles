@@ -11,6 +11,7 @@ import { useStore } from "./store.js";
 import { dkey } from "./lib/dates.js";
 import { streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
+import { configureAudio } from "./lib/audio.js";
 
 const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["gramatica", "Gramática"], ["repaso", "Repaso"]];
 const readTab = () => { try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; } };
@@ -35,6 +36,8 @@ export default function App() {
   }, [toasts]);
 
   const ai = server.ai && (!server.accessCodeRequired || !!s.profile.accessCode);
+  const { voiceMode, voice, accent, rate } = s.profile;
+  useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, rate, ai }); }, [voiceMode, voice, accent, rate, ai]);
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };
   const xp = s.xpByDay[today] || 0;
   const aiLabel = !server.checked ? "Coach IA: conectando…" : ai ? "Coach IA activo" : server.ai ? "Falta código de acceso" : "Modo básico (sin IA)";

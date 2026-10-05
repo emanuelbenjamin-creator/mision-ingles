@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import Icon from "../components/Icon.jsx";
 import MicButton from "../components/MicButton.jsx";
 import { GOALS } from "../content/meta.js";
 import { todaysTopic } from "../lib/missions.js";
 import { localAnalyze } from "../lib/analyze.js";
 import { words } from "../lib/align.js";
-import { speak } from "../lib/speech.js";
+import SpeakButton from "../components/SpeakButton.jsx";
 import { api } from "../lib/api.js";
 import { addMistake, bumpSkill, completeMission, logSession } from "../lib/game.js";
 
@@ -23,7 +22,6 @@ export default function Speak60({ s, update, today, ai, toast }) {
   const ctl = useRef(null);
   const base = useRef("");
   const tp = todaysTopic(s, today, offset);
-  const rate = s.profile.rate;
 
   useEffect(() => { try { sessionStorage.setItem(DRAFT, text); } catch { /* sin almacenamiento */ } }, [text]);
   useEffect(() => {
@@ -82,7 +80,7 @@ export default function Speak60({ s, update, today, ai, toast }) {
           <h2>{tp.t}</h2>
           <p className="hints">Frases útiles: {tp.h}</p>
           <div className="row">
-            <button className="btn ghost sm" type="button" onClick={() => speak(tp.t, rate)}><Icon name="play" /> Escuchar tema</button>
+            <SpeakButton text={tp.t} label="Escuchar tema" />
             <button className="btn ghost sm" type="button" onClick={() => { setOffset(o => o + 1); setFb(null); }}>Cambiar tema</button>
           </div>
         </div>
@@ -105,12 +103,12 @@ export default function Speak60({ s, update, today, ai, toast }) {
           {!ai && <p className="hint">Modo básico: se evalúan fluidez, vocabulario y errores típicos sin IA. Con el coach IA activo recibes correcciones completas y una versión mejorada.</p>}
         </div>
       </div>
-      <div className="stack"><Feedback busy={busy} fb={fb} rate={rate} /></div>
+      <div className="stack"><Feedback busy={busy} fb={fb} /></div>
     </div>
   );
 }
 
-function Feedback({ busy, fb, rate }) {
+function Feedback({ busy, fb }) {
   if (busy) return <div className="card"><p className="thinking">El coach está analizando tu respuesta… (unos segundos)</p></div>;
   if (!fb) {
     return (
@@ -154,8 +152,8 @@ function Feedback({ busy, fb, rate }) {
           <div className="row" style={{ justifyContent: "space-between", marginBottom: 6 }}>
             <h3>Versión mejorada</h3>
             <div className="row">
-              <button className="btn ghost sm" type="button" onClick={() => speak(a.better_version, rate)}><Icon name="play" /> Escuchar</button>
-              <button className="btn ghost sm" type="button" onClick={() => speak(a.better_version, 0.7)}>Lento</button>
+              <SpeakButton text={a.better_version} />
+              <SpeakButton text={a.better_version} slow label="Lento" />
             </div>
           </div>
           <p className="ai-out">{a.better_version}</p>

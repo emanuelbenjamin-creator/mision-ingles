@@ -1,30 +1,7 @@
-/* Voz en el navegador: speechSynthesis para escuchar y Web Speech API para dictar. Ambas gratuitas. */
+/* Dictado con la Web Speech API del navegador (gratis). Para escuchar, ver audio.js. */
 
 const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 export const canRecognize = () => !!SR;
-
-let voices = [];
-function loadVoices() { try { voices = window.speechSynthesis.getVoices(); } catch { voices = []; } }
-if (typeof window !== "undefined" && window.speechSynthesis) {
-  loadVoices();
-  window.speechSynthesis.onvoiceschanged = loadVoices;
-}
-
-export function speak(text, rate = 0.9) {
-  try {
-    const synth = window.speechSynthesis;
-    if (!synth) return false;
-    synth.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US";
-    u.rate = rate;
-    const v = voices.find(x => /^en[-_]US/i.test(x.lang) && /natural|google|samantha|aria|jenny/i.test(x.name))
-      || voices.find(x => /^en[-_]US/i.test(x.lang)) || voices.find(x => /^en/i.test(x.lang));
-    if (v) u.voice = v;
-    synth.speak(u);
-    return true;
-  } catch { return false; }
-}
 
 /**
  * Empieza a dictar en inglés. onText recibe el texto acumulado de esta grabación.

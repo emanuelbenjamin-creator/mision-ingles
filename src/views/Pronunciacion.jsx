@@ -1,18 +1,16 @@
 import { useRef, useState } from "react";
-import Icon from "../components/Icon.jsx";
+import SpeakButton from "../components/SpeakButton.jsx";
 import MicButton from "../components/MicButton.jsx";
 import { SOUNDS } from "../content/sounds.js";
 import { todaysSound } from "../lib/missions.js";
 import { alignWords } from "../lib/align.js";
-import { speak } from "../lib/speech.js";
 import { bumpSkill, completeMission, logSession } from "../lib/game.js";
 
-export default function Pronunciacion({ s, update, today, toast, soundId, setSoundId }) {
+export default function Pronunciacion({ update, today, toast, soundId, setSoundId }) {
   const snd = SOUNDS.find(x => x.id === soundId) || todaysSound(today);
   const [inputs, setInputs] = useState({});
   const [attempts, setAttempts] = useState({});
   const attemptsRef = useRef({});
-  const rate = s.profile.rate;
 
   const pick = id => { setSoundId(id); setInputs({}); setAttempts({}); attemptsRef.current = {}; };
   const check = (i, said) => {
@@ -46,7 +44,7 @@ export default function Pronunciacion({ s, update, today, toast, soundId, setSou
             <div className="pairs">
               {snd.pairs.map(p => (
                 <span className="pair" key={p}>{p}
-                  <button type="button" aria-label={"Escuchar " + p} onClick={() => speak(p.replace(/\/.*?\//g, "").replace("·", ", "), 0.8)}><Icon name="play" /></button>
+                  <SpeakButton text={p.replace(/\/.*?\//g, "").replace("·", ", ")} iconOnly className="pairbtn" />
                 </span>
               ))}
             </div>
@@ -63,8 +61,8 @@ export default function Pronunciacion({ s, update, today, toast, soundId, setSou
                     {at ? <div className="words">{at.tokens.map((t, k) => <span key={k} className={t.status === "ok" ? "w-ok" : t.status === "miss" ? "w-miss" : ""}>{t.text}</span>)}</div> : sent}
                   </div>
                   <div className="row">
-                    <button className="btn ghost sm" type="button" onClick={() => speak(sent, rate)}><Icon name="play" /> Normal</button>
-                    <button className="btn ghost sm" type="button" onClick={() => speak(sent, 0.65)}>Lento</button>
+                    <SpeakButton text={sent} label="Normal" />
+                    <SpeakButton text={sent} slow label="Lento" />
                     {at && <span className={"pill " + (at.score >= 85 ? "ok" : at.score >= 60 ? "" : "bad")}>{at.score}%</span>}
                   </div>
                   <div className="composer" style={{ gridTemplateColumns: "minmax(0,1fr) auto auto" }}>

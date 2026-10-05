@@ -7,5 +7,5 @@ export default endpoint(async body => {
   required(text, 15, "Tu respuesta");
   const seconds = Math.round(Number(body.seconds)) || null;
   const prompt = speakPrompt({ text, topic: str(body.topic, 200), lv: level(body.level), goalName: goal(body.goal), seconds });
-  return normalizeSpeak(parseJson(await generate({ system: COACH, contents: prompt, temperature: 0.3 })));
+  return normalizeSpeak(await generate({ system: COACH, contents: prompt, temperature: 0.3, validate: parseJson }));
 });

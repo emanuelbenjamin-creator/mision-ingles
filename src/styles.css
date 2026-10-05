@@ -176,8 +176,10 @@ textarea { min-height: 150px; resize: vertical; }
 .ipa { font-size: 2rem; font-family: var(--f-mono); color: var(--accent); line-height: 1; }
 .pairs { display: flex; flex-wrap: wrap; gap: 8px; }
 .pair { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 4px 4px 4px 12px; font-weight: 700; background: var(--surface); }
-.pair button { border: 0; background: var(--surface-2); border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; }
-.pair button svg { width: 15px; height: 15px; }
+.pair .pairbtn { border: 0; background: var(--surface-2); color: var(--ink); border-radius: 999px; width: 28px; height: 28px; display: grid; place-items: center; padding: 0; }
+.pair .pairbtn svg { width: 15px; height: 15px; }
+.pair .pairbtn.playing { background: var(--accent); color: var(--accent-ink); }
+.btn.playing { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 .sentences { display: grid; gap: 12px; }
 .sent { border: 1px solid var(--line); border-radius: 12px; padding: 14px; display: grid; gap: 10px; }
 .sent .en { font-size: 1.125rem; font-weight: 700; }

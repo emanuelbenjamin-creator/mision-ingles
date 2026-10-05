@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Icon from "../components/Icon.jsx";
+import SpeakButton from "../components/SpeakButton.jsx";
 import { dueCards, ivlLabel, learnedCount, NEW_PER_DAY, schedule } from "../lib/srs.js";
-import { speak } from "../lib/speech.js";
+import { playAudio } from "../lib/audio.js";
 import { completeMission } from "../lib/game.js";
 
 const GRADES = ["Otra vez", "Difícil", "Bien", "Fácil"];
@@ -14,7 +14,7 @@ export default function Repaso({ s, update, today }) {
   const isFix = card && card.tag === "mi error";
   const stats = { due: s.cards.filter(c => c.reps > 0 && c.due && c.due <= today).length, fresh: s.cards.filter(c => c.reps === 0).length, learned: learnedCount(s) };
 
-  const flip = () => { setShow(true); if (!isFix) speak(card.ex || card.front, s.profile.rate); };
+  const flip = () => { setShow(true); if (!isFix) playAudio(card.ex || card.front, { id: "norm:" + (card.ex || card.front) }); };
   const grade = g => {
     const rest = queue.slice(1);
     const nextQueue = g === 0 ? [...rest, card.id] : rest;
@@ -44,7 +44,7 @@ export default function Repaso({ s, update, today }) {
                   : <div className="ex">{isFix ? "¿Cómo se dice correctamente? Dilo en voz alta antes de voltear." : "¿Qué significa? Respóndelo en voz alta antes de voltear."}</div>}
               </div>
               <div className="row" style={{ justifyContent: "center" }}>
-                <button className="btn ghost sm" type="button" onClick={() => speak(isFix ? card.back : card.front, s.profile.rate)} disabled={isFix && !show}><Icon name="play" /> Escuchar</button>
+                {(!isFix || show) && <SpeakButton text={isFix ? card.back : card.front} />}
               </div>
               {show
                 ? <div className="grades">{GRADES.map((n, g) => <button type="button" key={n} onClick={() => grade(g)}>{n}<span>{ivlLabel(card, g, today)}</span></button>)}</div>

@@ -1,8 +1,7 @@
 import { useState } from "react";
-import Icon from "../components/Icon.jsx";
+import SpeakButton from "../components/SpeakButton.jsx";
 import { GRAMMAR } from "../content/grammar.js";
 import { todaysGrammar } from "../lib/missions.js";
-import { speak } from "../lib/speech.js";
 import { api } from "../lib/api.js";
 import { addMistake, addXP, bumpSkill, completeMission, logSession } from "../lib/game.js";
 
@@ -65,7 +64,7 @@ export default function Gramatica({ s, update, today, ai, toast, topic, setTopic
           <p>{g.exp}</p>
           <div className="formula">{g.formula}</div>
           <ul className="examples">
-            {g.ex.map(x => <li key={x}><button className="btn ghost sm" type="button" aria-label="Escuchar" onClick={() => speak(x, s.profile.rate)}><Icon name="play" /></button><span>{x}</span></li>)}
+            {g.ex.map(x => <li key={x}><SpeakButton text={x} iconOnly /><span>{x}</span></li>)}
           </ul>
         </div>
         <div className="card">

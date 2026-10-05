@@ -5,5 +5,5 @@ import { level, scenarioById, chatSystem, chatContents, normalizeChat } from "./
 export default endpoint(async body => {
   const sc = scenarioById(body.scenario);
   const contents = chatContents(sc, body.turns);
-  return normalizeChat(parseJson(await generate({ system: chatSystem(sc, level(body.level)), contents, temperature: 0.7 })));
+  return normalizeChat(await generate({ system: chatSystem(sc, level(body.level)), contents, temperature: 0.7, validate: parseJson }));
 });

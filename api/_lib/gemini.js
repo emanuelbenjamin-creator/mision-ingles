@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { HttpError } from "./http.js";
+import { enabledProviders, externalChat, externalModels, isExternal } from "./providers.js";
 
 /*
  * Solo modelos con capa gratuita de la Gemini API. Se lanzan todos a la vez y gana la primera
@@ -27,7 +28,9 @@ export const _setGenerator = fn => { testGenerator = fn; };
 /** Solo para pruebas: usa un cliente falso ({ models: { generateContent, list }, authTokens }). */
 export const _setClient = c => { client = c; known = null; cooling.clear(); };
 
-export const hasAI = () => !!(process.env.GEMINI_API_KEY || testGenerator || client);
+export const hasGemini = () => !!(process.env.GEMINI_API_KEY || client);
+/** Hay IA de texto si existe Gemini o cualquier proveedor externo (Groq, Cerebras, Mistral, OpenRouter). */
+export const hasAI = () => !!(testGenerator || hasGemini() || enabledProviders().length);
 
 export function getClient() {
   if (client) return client;
@@ -132,8 +135,11 @@ function aiDown(errors) {
  */
 export async function generate({ system, contents, json = true, temperature = 0.5, validate = x => x, hasAudio = false }) {
   if (testGenerator) return validate(await testGenerator({ system, contents, json, hasAudio }));
-  const c = getClient();
+  if (!hasAI()) throw new HttpError(503, "no_ai", "El servidor no tiene configurada ninguna clave de IA (GEMINI_API_KEY, GROQ_API_KEY o CEREBRAS_API_KEY).");
+  const c = hasGemini() ? getClient() : null;
+  const cool = list => list.filter(m => !((cooling.get(m) || 0) > Date.now()));
   const run = (model, signal) => {
+    if (isExternal(model)) return externalChat(model, { system, contents, json, temperature, signal });
     const gemma = isGemma(model);
     return c.models.generateContent({
       model,
@@ -150,12 +156,14 @@ export async function generate({ system, contents, json = true, temperature = 0.
       return text;
     });
   };
-  const primary = await availableModels(TEXT_MODELS(), c);
+  // Carrera principal: Gemini + Groq + Cerebras a la vez (los externos no escuchan audio).
+  const primary = [...(c ? await availableModels(TEXT_MODELS(), c) : []), ...(hasAudio ? [] : cool(await externalModels("primary")))];
   try {
     return (await race(primary, run, validate)).value;
   } catch (errors) {
-    if (hasAudio) throw aiDown(errors); // Gemma no escucha audio
-    const fb = await availableModels(FALLBACK_MODELS(), c);
+    if (hasAudio) throw aiDown(errors);
+    // Respaldo: Gemma + Mistral + OpenRouter.
+    const fb = [...(c ? await availableModels(FALLBACK_MODELS(), c) : []), ...cool(await externalModels("fallback"))];
     try { return (await race(fb, run, validate)).value; }
     catch (more) { throw aiDown([...(Array.isArray(errors) ? errors : []), ...(Array.isArray(more) ? more : [])]); }
   }

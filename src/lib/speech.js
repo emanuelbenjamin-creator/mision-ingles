@@ -3,6 +3,11 @@
 const SR = typeof window !== "undefined" ? (window.SpeechRecognition || window.webkitSpeechRecognition) : null;
 export const canRecognize = () => !!SR;
 
+/* Si el navegador no reconoce voz (Firefox, algunos iPhone), se graba y se transcribe en el servidor con Whisper. */
+let serverStt = false;
+export const configureSpeech = ({ stt }) => { serverStt = !!stt; };
+export const canServerTranscribe = () => serverStt;
+
 /**
  * Empieza a dictar en inglés. onText recibe el texto acumulado de esta grabación.
  * Devuelve { stop } o null si el navegador no lo permite. onError recibe "blocked" o "other".

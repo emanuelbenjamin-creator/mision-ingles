@@ -15,6 +15,7 @@ import pronAssess from "./_routes/pron-assess.js";
 import pushSubscribe from "./_routes/push-subscribe.js";
 import reading from "./_routes/reading.js";
 import speakEvaluate from "./_routes/speak-evaluate.js";
+import transcribe from "./_routes/transcribe.js";
 import tts from "./_routes/tts.js";
 import word from "./_routes/word.js";
 
@@ -39,6 +40,7 @@ export const ROUTES = {
   "push-subscribe": pushSubscribe,
   "reading": reading,
   "speak-evaluate": speakEvaluate,
+  "transcribe": transcribe,
   "tts": tts,
   "word": word,
 };

@@ -20,6 +20,7 @@ import { dkey } from "./lib/dates.js";
 import { CORE_MISSIONS, missionDone, streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio, setFallbackHandler } from "./lib/audio.js";
+import { configureSpeech } from "./lib/speech.js";
 import { addProfessionCards } from "./lib/state.js";
 
 const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
@@ -45,7 +46,7 @@ export default function App() {
   const [league, setLeague] = useState(null);
   const today = dkey();
 
-  useEffect(() => { health().then(h => setServer({ ...h, checked: true })); }, []);
+  useEffect(() => { health().then(h => { configureSpeech({ stt: !!h.stt }); setServer({ ...h, checked: true }); }); }, []);
   useEffect(() => { setFallbackHandler(reason => toast("Voz natural no disponible ahora: " + reason + " Suena la voz del navegador.")); }, [toast]);
   useEffect(() => { setAccessCode(s.profile.accessCode); }, [s.profile.accessCode]);
   useEffect(() => { try { sessionStorage.setItem("mi-tab", nav.tab); } catch { /* sin almacenamiento */ } }, [nav.tab]);

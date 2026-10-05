@@ -70,7 +70,9 @@ export default function Pronunciacion({ s, ai, update, today, toast, soundId, se
                       {at.tokens.filter(t => t.issue).map((t, k) => <div key={k}><b>{t.text}</b>: {t.issue}</div>)}
                       {at.ai.sounds_to_practice.length > 0 && <div style={{ marginTop: 4 }}>Practica: <span className="mono">{at.ai.sounds_to_practice.join(" ")}</span></div>}
                       {at.ai.tip_es && <div style={{ marginTop: 4 }}>{at.ai.tip_es}</div>}
+                      {at.ai.scores && <div className="small" style={{ marginTop: 4 }}>Precisión {at.ai.scores.accuracy} · Fluidez {at.ai.scores.fluency} · Completitud {at.ai.scores.completeness}</div>}
                       {at.ai.transcript && <div className="small muted" style={{ marginTop: 4 }}>Se escuchó: «{at.ai.transcript}»</div>}
+                      {at.ai.method && <div className="small muted">Evaluado con {{ azure: "Azure (fonemas)", gemini: "Gemini (escucha el audio)", whisper: "Whisper (transcripción)" }[at.ai.method] || at.ai.method}</div>}
                     </div>
                   )}
                   <div className="row">

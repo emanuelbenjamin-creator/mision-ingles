@@ -56,7 +56,15 @@ describe("API ielts-evaluate", () => {
     _setGenerator(a => { got = a; return '{"bands":{"fc":5,"lr":5,"gra":5,"p":5}}'; });
     const r = await call(body);
     expect(r.body).toMatchObject({ overall: 5, pronunciationFromAudio: false });
-    expect(got.contents[0].text).toContain("There is no audio");
+    expect(got.contents).toContain("There is no audio");
+  });
+  it("si la evaluación con audio falla, evalúa solo con el texto", async () => {
+    let n = 0;
+    _setGenerator(a => { n++; if (a.hasAudio) throw new Error("gemini caído"); return '{"bands":{"fc":6,"lr":6,"gra":6,"p":6}}'; });
+    const r = await call({ ...body, audio: Buffer.alloc(3000, 1).toString("base64") });
+    expect(r.status).toBe(200);
+    expect(r.body).toMatchObject({ overall: 6, pronunciationFromAudio: false });
+    expect(n).toBe(2);
   });
   it("respuestas muy cortas → 400; bandas faltantes → 502", async () => {
     expect((await call({ part1: [{ q: "Q", a: "yes" }] })).status).toBe(400);

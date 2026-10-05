@@ -99,3 +99,12 @@ describe("router único de la API", () => {
     expect((await call("health", null, "GET")).body.leagues).toBe(true);
   });
 });
+
+describe("todas las rutas están registradas", () => {
+  it("cada archivo de api/_routes tiene su entrada en el router", async () => {
+    const { readdirSync } = await import("node:fs");
+    const { ROUTES } = await import("../../api/[route].js");
+    const files = readdirSync(new URL("../../api/_routes/", import.meta.url)).filter(f => f.endsWith(".js")).map(f => f.slice(0, -3));
+    expect(Object.keys(ROUTES).sort()).toEqual(files.sort());
+  });
+});

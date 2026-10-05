@@ -436,3 +436,37 @@ test("tema oscuro con selector y menú de usuario", async ({ page }) => {
   await page.reload();
   await expect(root).toHaveAttribute("data-theme", "dark");
 });
+
+test("sin reconocimiento de voz en el navegador, el micrófono graba y transcribe con Whisper", async ({ page }) => {
+  await page.addInitScript(() => { delete window.SpeechRecognition; delete window.webkitSpeechRecognition; });
+  await mockApi(page);
+  await page.route("**/api/health", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, ai: true, gemini: true, stt: true }) }));
+  let sent;
+  await page.route("**/api/transcribe", route => { sent = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ text: "I would like a latte please" }) }); });
+  await onboard(page);
+  await page.getByRole("tab", { name: "Conversar" }).click();
+  const mic = page.locator('button[data-mode="server"]');
+  await mic.click();
+  await page.waitForTimeout(1000);
+  await page.getByRole("button", { name: "Detener" }).click();
+  await expect(page.locator("#chatIn")).toHaveValue("I would like a latte please");
+  expect(Buffer.from(sent.audio, "base64").toString("ascii", 0, 4)).toBe("RIFF");
+});
+
+test("pronunciación: muestra los puntajes de Azure y el motor usado", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/pron-assess", route => {
+    const t = route.request().postDataJSON().target;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ score: 77, transcript: t, method: "azure", scores: { accuracy: 75, fluency: 88, completeness: 100 },
+      words: t.split(/\s+/).map((w, i) => ({ word: w, ok: i !== 0, issue_es: i === 0 ? "Revisa /θ/ · precisión 40/100" : "" })), sounds_to_practice: ["/θ/"], tip_es: "Repite despacio." }) });
+  });
+  await onboard(page);
+  await page.getByTestId("mission-pron").getByRole("button", { name: "Empezar" }).click();
+  const first = page.locator(".sent").first();
+  await first.getByRole("button", { name: "Grábate" }).click();
+  await page.waitForTimeout(800);
+  await first.getByRole("button", { name: "Detener grabación" }).click();
+  await first.getByRole("button", { name: "Evaluar con IA" }).click();
+  await expect(page.getByTestId("pron-ai-0")).toContainText("Azure (fonemas)");
+  await expect(page.getByTestId("pron-ai-0")).toContainText("Fluidez 88");
+});

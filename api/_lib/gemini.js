@@ -28,7 +28,7 @@ export const _setGenerator = fn => { testGenerator = fn; };
 /** Solo para pruebas: usa un cliente falso ({ models: { generateContent, list }, authTokens }). */
 export const _setClient = c => { client = c; known = null; cooling.clear(); };
 
-export const hasGemini = () => !!(process.env.GEMINI_API_KEY || client);
+export const hasGemini = () => !!(process.env.GEMINI_API_KEY || client || testGenerator);
 /** Hay IA de texto si existe Gemini o cualquier proveedor externo (Groq, Cerebras, Mistral, OpenRouter). */
 export const hasAI = () => !!(testGenerator || hasGemini() || enabledProviders().length);
 

@@ -9,7 +9,7 @@ import { missionList } from "../lib/missions.js";
 import { learnedCount } from "../lib/srs.js";
 import { levelIdx, levelProgress } from "../lib/level.js";
 
-const SKILLS = [["pron", "Pronunciación"], ["flu", "Fluidez"], ["gram", "Gramática"], ["vocab", "Vocabulario"]];
+const SKILLS = [["pron", "Pronunciación"], ["flu", "Fluidez"], ["gram", "Gramática"], ["vocab", "Vocabulario"], ["comp", "Comprensión"]];
 
 export default function Hoy({ s, today, go }) {
   const xp = s.xpByDay[today] || 0, goal = s.profile.dailyGoal;

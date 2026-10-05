@@ -28,6 +28,8 @@ export function missionList(s, today) {
     { id: "pron", icon: "ear", title: "Pronunciación: " + sound.name, sub: sound.ipa + " · 3 frases para imitar", go: { tab: "hablar", mode: "pron", sound: sound.id } },
     { id: "grammar", icon: "book", title: "Gramática: " + g.name, sub: "Explicación + 4 ejercicios · nivel " + g.lv, go: { tab: "gramatica", topic: g.id } },
     { id: "review", icon: "cards", title: "Repasa tus tarjetas", sub: due ? `${due} tarjetas listas para hoy` : "Nada pendiente: ¡al día!", go: { tab: "repaso" } },
-    { id: "chat", icon: "chat", title: "Bonus · Conversación", sub: sc.name + " · 4 intercambios", go: { tab: "conversar", scen: sc.id }, bonus: true },
+    { id: "chat", icon: "chat", title: "Bonus · Conversación", sub: sc.name + " · 4 intercambios o 1 min de voz", go: { tab: "conversar", scen: sc.id }, bonus: true },
+    { id: "dictation", icon: "headphones", title: "Bonus · Dictado", sub: "Escucha 5 frases y escríbelas", go: { tab: "leer", leerMode: "dictado" }, bonus: true },
+    { id: "reading", icon: "book", title: "Bonus · Lectura", sub: "Una historia corta de tu nivel + 3 preguntas", go: { tab: "leer", leerMode: "lectura" }, bonus: true },
   ];
 }

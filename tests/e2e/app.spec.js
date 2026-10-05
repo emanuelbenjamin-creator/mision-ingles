@@ -39,7 +39,7 @@ const xp = page => page.getByTestId("xp-chip");
 test("primer uso: prueba de nivel y panel", async ({ page }) => {
   await mockApi(page);
   await onboard(page);
-  await expect(page.locator(".mission")).toHaveCount(5);
+  await expect(page.locator(".mission")).toHaveCount(7);
   await expect(xp(page)).toContainText("0 / 50 XP");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
@@ -184,4 +184,37 @@ test("pronunciación: grábate, escúchate y Gemini marca las palabras", async (
   await expect(first.locator(".w-miss")).toHaveCount(1);
   expect(sent.audio.length).toBeGreaterThan(2000);
   expect(Buffer.from(sent.audio, "base64").toString("ascii", 0, 4)).toBe("RIFF");
+});
+
+test("escuchar y leer: dictado y lectura completan sus misiones; tocar una palabra la agrega al mazo", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/reading", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({
+    title: "The Audit", text: "Ana prepared the audit report on Monday. Her manager reviewed every invoice carefully before lunch.\n\nThe client was happy because the report arrived early and had no mistakes at all.",
+    glossary: [["audit", "auditoría"]], questions: [{ q: "When?", o: ["Monday", "Friday"], a: 0 }, { q: "Who reviewed?", o: ["Ana", "Her manager"], a: 1 }, { q: "Client?", o: ["Happy", "Angry"], a: 0 }] }) }));
+  await page.route("**/api/word", route => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ es: "factura", ipa: "/ˈɪn.vɔɪs/", example: "Send the invoice." }) }));
+  await onboard(page);
+
+  await page.getByTestId("mission-dictation").getByRole("button", { name: "Empezar" }).click();
+  const sents = page.locator(".sent");
+  for (let i = 0; i < 5; i++) {
+    await page.locator("#dict" + i).fill(i === 0 ? "wrong words here" : "I think it was this");
+    await sents.nth(i).getByRole("button", { name: "Comprobar" }).click();
+  }
+  await expect(page.getByTestId("dict-res-0").locator(".w-miss").first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Lectura" }).click();
+  await expect(page.getByTestId("reading")).toContainText("Ana prepared the audit report");
+  await page.getByTestId("reading").getByRole("button", { name: "invoice", exact: true }).click();
+  await expect(page.getByTestId("word-card")).toContainText("factura");
+  await page.getByRole("button", { name: "+ Agregar a mis tarjetas" }).click();
+  await page.getByTestId("reading").getByRole("button", { name: "audit", exact: true }).click();
+  await expect(page.getByTestId("word-card")).toContainText("auditoría");
+  for (const [i, opt] of [[0, "Monday"], [1, "Her manager"], [2, "Happy"]]) await page.locator(".q").nth(i).getByRole("button", { name: opt }).click();
+  await expect(page.locator(".opt.right")).toHaveCount(3);
+
+  await page.getByRole("tab", { name: "Hoy" }).click();
+  await expect(page.getByTestId("mission-dictation")).toHaveClass(/done/);
+  await expect(page.getByTestId("mission-reading")).toHaveClass(/done/);
+  await page.getByRole("tab", { name: "Repaso" }).click();
+  await expect(page.locator(".tile", { hasText: "nuevas" })).toContainText("31");
 });

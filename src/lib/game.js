@@ -6,7 +6,7 @@ import { learnedCount } from "./srs.js";
  * devuelven mensajes para mostrar como avisos.
  */
 
-export const MISSION_XP = { speak: 20, pron: 15, grammar: 15, review: 10, chat: 20 };
+export const MISSION_XP = { speak: 20, pron: 15, grammar: 15, review: 10, chat: 20, dictation: 15, reading: 15, ielts: 40 };
 export const CORE_MISSIONS = ["speak", "pron", "grammar", "review"];
 
 export function streak(s, today) {
@@ -58,6 +58,15 @@ export function addMistake(s, { wrong, right, why, rule, src }, today) {
   s.mistakes.unshift({ d: today, wrong: String(wrong).trim(), right: String(right).trim(), why: why || "", rule: rule || "Otro", src: src || "" });
   if (s.mistakes.length > 150) s.mistakes.length = 150;
   s.cards.push({ id: "m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), front: "Corrige: «" + String(wrong).trim() + "»", back: String(right).trim(), ex: why || "", tag: "mi error", due: null, ivl: 0, ease: 2.5, reps: 0, lapses: 0 });
+  return true;
+}
+
+/** Agrega una tarjeta de vocabulario al mazo (sin duplicar). Devuelve true si la agregó. */
+export function addCard(s, { front, back, ex = "", tag = "lectura" }) {
+  const f = String(front || "").trim();
+  if (!f || !back) return false;
+  if (s.cards.some(c => c.front.toLowerCase() === f.toLowerCase())) return false;
+  s.cards.push({ id: "w" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), front: f, back: String(back).trim(), ex, tag, due: null, ivl: 0, ease: 2.5, reps: 0, lapses: 0 });
   return true;
 }
 

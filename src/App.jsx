@@ -5,6 +5,7 @@ import Hablar from "./views/Hablar.jsx";
 import Conversar from "./views/Conversar.jsx";
 import Gramatica from "./views/Gramatica.jsx";
 import Repaso from "./views/Repaso.jsx";
+import Leer from "./views/Leer.jsx";
 import Ajustes from "./views/Ajustes.jsx";
 import Onboarding from "./views/Onboarding.jsx";
 import { useStore } from "./store.js";
@@ -13,7 +14,7 @@ import { streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio } from "./lib/audio.js";
 
-const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["gramatica", "Gramática"], ["repaso", "Repaso"]];
+const TABS = [["hoy", "Hoy"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"]];
 const readTab = () => { try { return sessionStorage.getItem("mi-tab") || "hoy"; } catch { return "hoy"; } };
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
   const toast = useCallback(msg => setToasts(t => [...t, msg]), []);
   const onMessages = useCallback(msgs => setToasts(t => [...t, ...msgs]), []);
   const [s, update, replace] = useStore(onMessages);
-  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat" });
+  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
   const today = dkey();
@@ -74,6 +75,7 @@ export default function App() {
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
+            {nav.tab === "leer" && <Leer {...common} mode={nav.leerMode} setMode={leerMode => setNav(n => ({ ...n, leerMode }))} />}
             {nav.tab === "gramatica" && <Gramatica {...common} topic={nav.topic} setTopic={topic => setNav(n => ({ ...n, topic }))} />}
             {nav.tab === "repaso" && <Repaso {...common} />}
           </section>

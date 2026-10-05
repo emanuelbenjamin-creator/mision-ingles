@@ -9,6 +9,9 @@
     },
     "api/pron-assess.js": {
       "maxDuration": 60
+    },
+    "api/reading.js": {
+      "maxDuration": 60
     }
   }
 }

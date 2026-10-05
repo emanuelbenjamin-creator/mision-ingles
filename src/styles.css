@@ -268,3 +268,11 @@ textarea { min-height: 150px; resize: vertical; }
 .live-stage.listening .live-orb { background: var(--accent-soft); color: var(--accent); animation: pulse 1.6s ease-in-out infinite; }
 .live-stage.speaking .live-orb { background: var(--accent); color: var(--accent-ink); transform: scale(1.08); }
 @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); } 50% { box-shadow: 0 0 0 10px transparent; } }
+/* Lectura */
+.reading { display: grid; gap: 14px; }
+.reading .para { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; }
+.reading p { font-size: 1.08rem; line-height: 1.75; max-width: 65ch; }
+.tw { cursor: pointer; border-radius: 4px; }
+.tw:hover { background: var(--surface-2); }
+.tw.g { text-decoration: underline dotted var(--accent); text-underline-offset: 4px; }
+.tw.on { background: var(--accent-soft); color: var(--accent); }

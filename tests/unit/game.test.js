@@ -82,10 +82,10 @@ describe("misiones del día", () => {
     s.grammar = { pres: 100, past: 100, comp: 100 };
     expect(todaysGrammar(s, T).id).toBe("fut");
   });
-  it("lista 4 misiones principales y 1 bonus", () => {
+  it("lista 4 misiones principales y 3 bonus", () => {
     const ms = missionList(defaultState(), T);
-    expect(ms.map(m => m.id)).toEqual(["speak", "pron", "grammar", "review", "chat"]);
-    expect(ms.filter(m => m.bonus)).toHaveLength(1);
+    expect(ms.map(m => m.id)).toEqual(["speak", "pron", "grammar", "review", "chat", "dictation", "reading"]);
+    expect(ms.filter(m => m.bonus)).toHaveLength(3);
   });
   it("el avance de nivel empieza en 0 y crece", () => {
     const s = defaultState();

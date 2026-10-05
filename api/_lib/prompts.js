@@ -1,5 +1,6 @@
 import { LEVELS, GOALS } from "../../src/content/meta.js";
 import { SCENARIOS } from "../../src/content/scenarios.js";
+import { PROFESSIONS } from "../../src/content/professions.js";
 import { HttpError } from "./http.js";
 
 /* Validación de entradas y normalización de salidas: nunca se confía en lo que manda el navegador ni en el formato del modelo. */
@@ -41,8 +42,11 @@ export function normalizeSpeak(o) {
 }
 
 /* ---------- Conversación ---------- */
+export const ALL_SCENARIOS = [...SCENARIOS, ...Object.values(PROFESSIONS).flatMap(p => p.scenarios)];
+export const profession = x => (PROFESSIONS[x] || PROFESSIONS.general);
+
 export function scenarioById(id) {
-  const sc = SCENARIOS.find(s => s.id === id);
+  const sc = ALL_SCENARIOS.find(s => s.id === id);
   if (!sc) throw new HttpError(400, "bad_scenario", "Escenario desconocido.");
   return sc;
 }
@@ -145,4 +149,38 @@ export function normalizePron(o, target) {
     sounds_to_practice: arr(o && o.sounds_to_practice, 5).map(x => str(x, 20)).filter(Boolean),
     tip_es: str(o && o.tip_es, 400),
   };
+}
+
+/* ---------- Escuchar y leer ---------- */
+const LENGTH = { A1: "80-110", A2: "110-150", B1: "150-200", B2: "200-250", C1: "250-300", C2: "250-300" };
+
+export function dictationPrompt(lv, prof) {
+  return `Write 5 different sentences for an English dictation exercise for a learner at CEFR ${lv} whose field is ${prof.en}. Use natural, useful sentences (6-${lv.startsWith("A") ? 10 : 16} words), varied grammar for that level, and avoid rare names. Reply with ONLY a JSON object: {"sentences":["...","...","...","...","..."]}`;
+}
+
+export function readingPrompt(lv, prof, seed) {
+  return `Write an original short graded reading for an English learner at CEFR ${lv} (native Spanish speaker), related to ${prof.en}. Length: ${LENGTH[lv] || "150-200"} words, 2-3 paragraphs separated by a blank line, vocabulary and grammar appropriate for ${lv}, a small story with a clear point. Variation seed: ${seed}.
+Reply with ONLY a JSON object:
+{"title":"...","text":"paragraph 1\\n\\nparagraph 2","glossary":[{"word":"word or phrase exactly as it appears in the text","es":"traducción al español en contexto"}],"questions":[{"q":"comprehension question","o":["option A","option B","option C"],"a":0}]}
+Include 8-10 glossary items (the most useful or difficult words) and exactly 3 questions with 3 options each; "a" is the index of the correct option.`;
+}
+
+export function normalizeReading(o) {
+  const text = String((o && o.text) || "").replace(/\r/g, "").trim().slice(0, 3000);
+  const questions = arr(o && o.questions, 3).map(q => {
+    const opts = arr(q && q.o, 4).map(x => str(x, 160)).filter(Boolean);
+    const a = Math.round(Number(q && q.a));
+    return { q: str(q && q.q, 200), o: opts, a: Number.isInteger(a) && a >= 0 && a < opts.length ? a : 0 };
+  }).filter(q => q.q && q.o.length >= 2);
+  if (!text || text.split(/\s+/).length < 40 || questions.length < 2) throw new HttpError(502, "invalid_json", "La lectura llegó incompleta. Inténtalo otra vez.");
+  return {
+    title: str(o && o.title, 120) || "Reading",
+    text,
+    glossary: arr(o && o.glossary, 12).map(g => [str(g && g.word, 60), str(g && g.es, 120)]).filter(g => g[0] && g[1]),
+    questions,
+  };
+}
+
+export function wordPrompt(word, sentence) {
+  return `An English learner (native Spanish speaker) tapped the word "${word}" in this sentence: "${sentence}". Reply with ONLY a JSON object: {"es":"traducción al español en este contexto (máx. 6 palabras)","ipa":"IPA pronunciation","example":"another short natural English example sentence using it"}`;
 }

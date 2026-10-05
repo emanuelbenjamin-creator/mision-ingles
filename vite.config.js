@@ -50,8 +50,9 @@ export default defineConfig({
       strategies: "injectManifest",
       srcDir: "src",
       filename: "sw.js",
-      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"] },
+      injectManifest: { globPatterns: ["**/*.{js,css,html,svg,png,webmanifest}"], globIgnores: ["**/kokoro.worker-*.js", "**/*.wasm"] },
     }),
   ],
+  worker: { format: "es" },
   test: { include: ["tests/unit/**/*.test.js"], environment: "node" },
 });

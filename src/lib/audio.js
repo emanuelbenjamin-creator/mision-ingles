@@ -1,5 +1,6 @@
 import { apiBlob } from "./api.js";
 import { hash } from "./dates.js";
+import { kokoroReady, kokoroSpeak } from "./kokoro.js";
 
 /*
  * Reproductor único de la app. Usa la voz natural de Gemini (/api/tts) cuando está activa y hay IA;
@@ -8,7 +9,7 @@ import { hash } from "./dates.js";
  * - Avance (0–1) por un canal aparte, para pintar la barra sin re-renderizar toda la app.
  */
 
-let prefs = { mode: "natural", voice: "Kore", accent: "us", rate: 0.9, ai: false };
+let prefs = { mode: "natural", voice: "Kore", accent: "us", rate: 0.9, ai: false, kokoroVoice: "af_heart" };
 let state = { id: null, status: "idle", engine: null };
 const listeners = new Set();
 const progressListeners = new Set();
@@ -18,7 +19,7 @@ const mem = new Map();
 const CACHE = "tts-v1";
 let onFallback = null;
 let lastFallback = null; // { reason, at }
-export let lastEngine = null; // "natural" | "browser"
+export let lastEngine = null; // "natural" | "kokoro" | "browser"
 
 export const configureAudio = p => { prefs = { ...prefs, ...p }; };
 /** Se llama (una vez por motivo) cuando la voz natural falla y se usa la del navegador. */
@@ -109,15 +110,42 @@ function playBrowser(text, slow, id, my) {
   return true;
 }
 
+async function kokoroBlob(text, voice) {
+  const v = voice || prefs.kokoroVoice || (prefs.accent === "uk" ? "bf_emma" : "af_heart");
+  const key = `k|${v}|${hash(text)}|${text.length}`;
+  if (mem.has(key)) return mem.get(key);
+  const blob = await kokoroSpeak(text, { voice: v });
+  mem.set(key, blob);
+  return blob;
+}
+
+async function playKokoro(text, slow, id, my, voice) {
+  setState({ id, status: "loading", engine: "kokoro" });
+  const blob = await kokoroBlob(text, voice);
+  if (my !== turn) return true;
+  const url = URL.createObjectURL(blob);
+  const a = new Audio(url);
+  a.playbackRate = slow ? 0.8 : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
+  a.addEventListener("ended", () => URL.revokeObjectURL(url));
+  await playElement(a, id, my, "kokoro");
+  return true;
+}
+
 function reportFallback(reason) {
   const changed = !lastFallback || lastFallback.reason !== reason;
   lastFallback = { reason, at: Date.now() };
   if (changed && onFallback) onFallback(reason);
 }
 
-export async function playAudio(text, { slow = false, id = text, voice } = {}) {
+export async function playAudio(text, { slow = false, id = text, voice, kokoroVoice } = {}) {
   stopAudio();
   const my = turn;
+  if (prefs.mode === "kokoro" || kokoroVoice) {
+    if (kokoroReady()) {
+      try { if (await playKokoro(text, slow, id, my, kokoroVoice)) return; }
+      catch (e) { if (my !== turn) return; reportFallback("La voz Kokoro falló: " + ((e && e.message) || "error")); }
+    } else reportFallback("La voz Kokoro aún no está descargada en este dispositivo (Ajustes → Voz).");
+  }
   if (prefs.mode === "natural" && prefs.ai) {
     setState({ id, status: "loading", engine: "natural" });
     try {
@@ -133,6 +161,11 @@ export async function playAudio(text, { slow = false, id = text, voice } = {}) {
     } catch (e) {
       if (my !== turn) return; // se detuvo mientras cargaba
       reportFallback((e && e.message) || "La voz natural no respondió.");
+      // Respaldo de calidad: Kokoro, si ya está descargada en este dispositivo.
+      if (kokoroReady()) {
+        try { if (await playKokoro(text, slow, id, my)) return; } catch { /* sigue con la del navegador */ }
+        if (my !== turn) return;
+      }
     }
   }
   playBrowser(text, slow, id, my);
@@ -151,6 +184,13 @@ export function previewVoice(voice) {
   const text = `Hi! I'm ${voice}. Let's practise your English together. How was your day?`;
   if (state.id === id && state.status !== "idle") { stopAudio(); return; }
   playAudio(text, { id, voice });
+}
+
+/** Escuchar una voz Kokoro antes de elegirla. */
+export function previewKokoro(voiceId) {
+  const id = "kvoice:" + voiceId;
+  if (state.id === id && state.status !== "idle") { stopAudio(); return; }
+  playAudio("Hi! This voice runs right here on your device. Let's practise your English together.", { id, kokoroVoice: voiceId });
 }
 
 /** Reproduce una grabación (URL de Blob) con el mismo estado compartido que los demás audios. */

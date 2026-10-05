@@ -26,7 +26,7 @@ export default function SpeakButton({ text, slow = false, label = "Escuchar", ic
   const loading = active && st.status === "loading";
   const ref = useProgressVar(active && !loading);
   const text2 = active ? (loading ? "Cargando…" : "Detener") : label;
-  const engine = active && !loading ? (st.engine === "natural" ? "Voz natural de Gemini" : st.engine === "browser" ? "Voz del navegador" : "") : "";
+  const engine = active && !loading ? ({ natural: "Voz natural de Gemini", kokoro: "Voz Kokoro (en tu dispositivo)", browser: "Voz del navegador" }[st.engine] || "") : "";
   return (
     <button ref={ref} type="button" className={"audio-btn " + className + (active ? (loading ? " loading" : " playing") : "")} style={style}
       aria-label={iconOnly ? text2 : undefined} aria-pressed={active} title={engine || undefined} data-engine={active ? st.engine || "" : ""}

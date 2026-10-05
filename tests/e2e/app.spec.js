@@ -470,3 +470,40 @@ test("pronunciación: muestra los puntajes de Azure y el motor usado", async ({ 
   await expect(page.getByTestId("pron-ai-0")).toContainText("Azure (fonemas)");
   await expect(page.getByTestId("pron-ai-0")).toContainText("Fluidez 88");
 });
+
+test("voz Kokoro: se descarga desde Ajustes y luego suena en los botones", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wavBuf = () => {
+      const n = 24000 * 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+      const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, 24000, true); v.setUint32(28, 48000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+      return buf;
+    };
+    window.__kokoroMsgs = [];
+    window.Worker = class {
+      postMessage(m) {
+        window.__kokoroMsgs.push(m);
+        setTimeout(() => {
+          if (m.type === "load") { this.onmessage({ data: { type: "progress", loaded: 40, total: 100 } }); setTimeout(() => this.onmessage({ data: { type: "ready" } }), 300); }
+          if (m.type === "speak") this.onmessage({ data: { type: "audio", id: m.id, buf: wavBuf() } });
+        }, 20);
+      }
+      terminate() {}
+    };
+  });
+  await mockApi(page);
+  await onboard(page);
+  await openSettings(page);
+  await page.getByRole("button", { name: "Kokoro (en tu equipo)" }).click();
+  await page.getByRole("button", { name: "Descargar voz Kokoro" }).click();
+  await expect(page.getByTestId("kokoro")).toContainText("Voz Kokoro lista");
+  await page.getByRole("radio", { name: /George/ }).click();
+  await page.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("tab", { name: "Gramática" }).click();
+  const btn = page.locator(".examples li").first().getByRole("button");
+  await btn.click();
+  await expect(btn).toHaveAttribute("data-engine", "kokoro");
+  const speak = await page.evaluate(() => window.__kokoroMsgs.find(m => m.type === "speak"));
+  expect(speak.voice).toBe("bm_george");
+});

@@ -4,6 +4,7 @@ import { exportState, importState } from "../lib/storage.js";
 import { addProfessionCards, defaultState } from "../lib/state.js";
 import { PROFESSIONS } from "../content/professions.js";
 import VoicePicker from "../components/VoicePicker.jsx";
+import KokoroPanel from "../components/KokoroPanel.jsx";
 import { getLastFallback, lastEngine } from "../lib/audio.js";
 import { disableReminders, enableReminders, isIOS, pushSupported } from "../lib/push.js";
 import { streak } from "../lib/game.js";
@@ -55,10 +56,12 @@ export default function Ajustes({ s, update, replace, server, onClose, toast, ai
         <div className="field">
           <label>Voz para escuchar</label>
           <div className="seg" role="group" aria-label="Motor de voz">
-            <button type="button" aria-pressed={p.voiceMode !== "browser"} onClick={() => set({ voiceMode: "natural" })}>Natural de Gemini</button>
-            <button type="button" aria-pressed={p.voiceMode === "browser"} onClick={() => set({ voiceMode: "browser" })}>Del navegador (sin internet)</button>
+            <button type="button" aria-pressed={!p.voiceMode || p.voiceMode === "natural"} onClick={() => set({ voiceMode: "natural" })}>Gemini (nube)</button>
+            <button type="button" aria-pressed={p.voiceMode === "kokoro"} onClick={() => set({ voiceMode: "kokoro" })}>Kokoro (en tu equipo)</button>
+            <button type="button" aria-pressed={p.voiceMode === "browser"} onClick={() => set({ voiceMode: "browser" })}>Del navegador</button>
           </div>
-          {p.voiceMode !== "browser" && <VoicePicker value={p.voice} onChange={voice => set({ voice })} />}
+          {(!p.voiceMode || p.voiceMode === "natural") && <VoicePicker value={p.voice} onChange={voice => set({ voice })} />}
+          {p.voiceMode === "kokoro" && <KokoroPanel value={p.kokoroVoice || "af_heart"} onChange={kokoroVoice => set({ kokoroVoice })} onEnable={() => update(d => { d.profile.kokoroEnabled = true; })} />}
           <VoiceStatus natural={p.voiceMode !== "browser"} ai={ai} />
         </div>
         <div className="field"><label htmlFor="stAccent">Acento</label><select id="stAccent" value={p.accent} onChange={e => set({ accent: e.target.value })}><option value="us">Estadounidense</option><option value="uk">Británico</option></select></div>

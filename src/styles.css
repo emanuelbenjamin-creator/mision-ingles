@@ -414,3 +414,4 @@ fieldset.live-setup:disabled { opacity: .6; }
   .topbar .chip { padding: 5px 9px; font-size: .8rem; }
   .topbar .iconbtn { width: 34px; height: 34px; }
 }
+.kokoro { display: grid; gap: 10px; }

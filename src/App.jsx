@@ -21,6 +21,7 @@ import { CORE_MISSIONS, missionDone, streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio, setFallbackHandler } from "./lib/audio.js";
 import { configureSpeech } from "./lib/speech.js";
+import { loadKokoro } from "./lib/kokoro.js";
 import { addProfessionCards } from "./lib/state.js";
 
 const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
@@ -78,8 +79,11 @@ export default function App() {
     if (installEvt) { installEvt.prompt(); setInstallEvt(null); return; }
     toast(/iPhone|iPad/.test(navigator.userAgent) ? "En iPhone: botón Compartir → «Agregar a inicio»." : "En el menú del navegador elige «Instalar app» o «Agregar a pantalla de inicio».");
   };
-  const { voiceMode, voice, accent, rate } = s.profile;
-  useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, rate, ai }); }, [voiceMode, voice, accent, rate, ai]);
+  const { voiceMode, voice, accent, rate, kokoroVoice, kokoroEnabled } = s.profile;
+  const geminiVoice = ai && server.gemini !== false;
+  useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, rate, ai: geminiVoice, kokoroVoice }); }, [voiceMode, voice, accent, rate, geminiVoice, kokoroVoice]);
+  // Si ya descargó Kokoro, se carga desde la caché al abrir la app (sin volver a bajar el modelo).
+  useEffect(() => { if (kokoroEnabled) loadKokoro(); }, [kokoroEnabled]);
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };
   const xp = s.xpByDay[today] || 0;
   const aiLabel = !server.checked ? "Coach IA: conectando…" : ai ? "Coach IA activo" : server.ai ? "Falta código de acceso" : "Modo básico (sin IA)";

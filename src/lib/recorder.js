@@ -21,15 +21,15 @@ export function encodeWav(pcm16, rate = 16000) {
  * Empieza a grabar. Devuelve { stop(), done } donde done resuelve con
  * { url, wavBase64, seconds } (url sirve para escucharte).
  */
-export async function startRecording({ maxMs = 8000, rate = 16000 } = {}) {
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+export async function startRecording({ maxMs = 8000, rate = 16000, stream: given = null } = {}) {
+  const stream = given || await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
   const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus"].find(t => window.MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t));
   const rec = new MediaRecorder(stream, type ? { mimeType: type } : undefined);
   const chunks = [];
   rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
   const done = new Promise((resolve, reject) => {
     rec.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
+      if (!given) stream.getTracks().forEach(t => t.stop());
       try {
         const blob = new Blob(chunks, { type: rec.mimeType || type || "audio/webm" });
         const ctx = new AudioContext();

@@ -17,6 +17,7 @@ import reading from "./_routes/reading.js";
 import speakEvaluate from "./_routes/speak-evaluate.js";
 import transcribe from "./_routes/transcribe.js";
 import tts from "./_routes/tts.js";
+import voiceTurn from "./_routes/voice-turn.js";
 import word from "./_routes/word.js";
 
 /*
@@ -42,6 +43,7 @@ export const ROUTES = {
   "speak-evaluate": speakEvaluate,
   "transcribe": transcribe,
   "tts": tts,
+  "voice-turn": voiceTurn,
   "word": word,
 };
 

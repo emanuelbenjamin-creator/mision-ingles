@@ -16,7 +16,7 @@ const mm = s => `${Math.floor(s / 60)} min`;
 
 /** Panel dedicado a Gemini Live: modo, tema, voz, forma de corregir, ritmo, llamada e historial. */
 export default function EnVivo(props) {
-  const { s, update, ai } = props;
+  const { s, update, ai, server = {} } = props;
   const [mode, setMode] = useState("free");
   const [topic, setTopic] = useState("");
   const scenarios = useMemo(() => scenariosFor(s), [s]);
@@ -25,6 +25,8 @@ export default function EnVivo(props) {
   const [pace, setPace] = useState("normal");
   const [locked, setLocked] = useState(false);
   const voice = s.profile.liveVoice || s.profile.voice || "Kore";
+  const engine = s.profile.liveEngine || (server.gemini === false ? "economy" : "live");
+  const setEngine = v => update(d => { d.profile.liveEngine = v; });
 
   const scenario = mode === "roleplay" ? scen : mode;
   const title = mode === "roleplay" ? (scenarios.find(x => x.id === scen) || {}).name : MODES.find(m => m.id === mode).name;
@@ -44,7 +46,7 @@ export default function EnVivo(props) {
           <p className="muted">Una llamada real con tu coach de inglés: hablas, te responde con voz natural y puedes interrumpirlo. Al colgar recibes tu revisión con errores y puntajes.</p>
         </div>
         <div className="card">
-          <LiveVoice key={scenario + voice + pace + correction} {...props} opts={opts} title={title} onLiveChange={setLocked} />
+          <LiveVoice key={scenario + voice + pace + correction + engine} {...props} opts={opts} title={title} onLiveChange={setLocked} engine={engine} onEngineChange={setEngine} />
         </div>
         <div className="card">
           <div className="card-head"><h2>Tus llamadas</h2><span className="small muted">hoy {mm(todaySecs)} · semana {mm(weekSecs)}</span></div>
@@ -63,6 +65,14 @@ export default function EnVivo(props) {
         <fieldset className="card live-setup" disabled={locked} data-testid="live-setup">
           <legend className="sr-only">Configura tu llamada</legend>
           <div className="card-head"><h2>Configura tu llamada</h2>{locked && <span className="pill">En llamada</span>}</div>
+          <div className="field">
+            <label>Motor de voz</label>
+            <div className="seg" role="group" aria-label="Motor de voz">
+              <button type="button" aria-pressed={engine === "live"} disabled={server.gemini === false} onClick={() => setEngine("live")}>Gemini Live</button>
+              <button type="button" aria-pressed={engine === "economy"} onClick={() => setEngine("economy")}>Económico</button>
+            </div>
+            <p className="small muted">{engine === "live" ? "Tiempo real: puedes interrumpir al coach." : "Por turnos: reconocimiento del navegador o Whisper, modelos gratuitos (Gemini, Groq, Cerebras) y tu voz elegida. Úsalo si Gemini Live está ocupado o sin cuota."}</p>
+          </div>
           <div className="choice">
             {MODES.map(m => <button type="button" key={m.id} aria-pressed={mode === m.id} onClick={() => setMode(m.id)}>{m.name}<span>{m.desc}</span></button>)}
           </div>

@@ -201,3 +201,15 @@ export async function toggleClip(url, id) {
   try { await playElement(new Audio(url), id, my, "clip"); }
   catch { if (my === turn) { current = null; setState({ id: null, status: "idle", engine: null }); } }
 }
+
+/** Reproduce y resuelve cuando termina (para el modo de voz económico). */
+export function speakAndWait(text) {
+  return new Promise(resolve => {
+    const id = "eco:" + Date.now() + Math.random();
+    let started = false, done = false;
+    const finish = () => { if (done) return; done = true; un(); clearTimeout(safety); resolve(); };
+    const un = subscribeAudio(st => { if (st.id === id) started = true; else if (started) finish(); });
+    const safety = setTimeout(finish, 4000 + text.split(/\s+/).length * 700);
+    playAudio(text, { id });
+  });
+}

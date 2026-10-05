@@ -1,10 +1,10 @@
 # Misión Inglés
 
-Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne lo mejor de Stimuler, Duolingo, ELSA, Speak y Anki, **usando solo modelos gratuitos de Google**.
+Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne lo mejor de Stimuler, Duolingo, ELSA, Speak y Anki, **usando solo capas gratuitas**: Gemini de Google como base, más Groq, Cerebras, Mistral, OpenRouter, Azure Speech y la voz Kokoro que corre en tu propio equipo.
 
 | Sección | Qué hace |
 |---|---|
-| **En vivo** | Panel dedicado a **Gemini Live**: conversación libre (con tema), profesor de speaking que corrige al momento, juegos de roles o examinador IELTS; ritmo natural o lento; **30 voces** para elegir y escuchar antes; visualizador de voz, transcripción, revisión al colgar e historial de llamadas |
+| **En vivo** | Panel dedicado a **Gemini Live**: conversación libre (con tema), profesor de speaking que corrige al momento, juegos de roles o examinador IELTS; ritmo natural o lento; **30 voces** para elegir y escuchar antes; visualizador de voz, transcripción, revisión al colgar e historial de llamadas. **Modo económico** si Gemini Live está ocupado: hablan por turnos con reconocimiento del navegador o Whisper, modelos gratuitos y tu voz elegida |
 | **Diseño** | Menú lateral, tarjetas suaves y acentos morado → azul → cian; **tema claro, oscuro o según el dispositivo** (botón ☾/☀ y menú de usuario) |
 | **Menú de usuario** | Ajustes (Ctrl+,), Mi uso (consultas de hoy vs. límite gratis), Tema, Idioma, Ayuda, Instalar la app, Copia de seguridad y Cerrar sesión (se activa cuando haya cuentas de usuario) |
 | **Hoy** | Meta diaria de XP, racha, gráfico de 14 días, ruta MCER, habilidades, **reporte semanal**, liga, último IELTS, errores frecuentes y logros |
@@ -16,6 +16,7 @@ Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne l
 | **Repaso** | Repetición espaciada, cuaderno de errores y **lección semanal creada con tus errores** |
 | **Liga** | Ligas semanales Bronce → Diamante: los 5 primeros suben y los 5 últimos bajan |
 | **Profesión** | Vocabulario, temas y conversaciones de Contabilidad y tributos, Ventas, Tecnología, Salud o Turismo |
+| **Voces** | Gemini (nube, 30 voces), **Kokoro** (82M, se descarga una vez ~90 MB y funciona sin internet ni límites) o la del navegador. Si Gemini falla, se usa Kokoro antes que la del navegador |
 | **Recordatorios** | Notificación si tu racha está en riesgo |
 
 Todos los botones de audio cambian a **Detener** y se ponen **verdes con una barra de avance** mientras suenan (barra animada mientras carga la voz natural). En Ajustes eliges entre las 30 voces de Gemini y ves si estás escuchando la voz natural o la del navegador, y por qué. Las voces son las naturales de Gemini, con la voz del navegador como respaldo. Sin IA, la app sigue funcionando en **modo básico** (20 reglas de errores típicos, dictado, repaso, gramática).
@@ -25,6 +26,10 @@ Todos los botones de audio cambian a **Detener** y se ponen **verdes con una bar
 - **Frontend**: React 19 + Vite 8 + PWA (service worker propio en `src/sw.js` para trabajar sin conexión y recibir notificaciones). El progreso se guarda en el dispositivo y se puede respaldar en Ajustes.
 - **API**: una sola función serverless (`api/[route].js`) que despacha a `api/_routes/*`. El plan gratis de Vercel admite máximo 12 funciones.
 - **IA, solo gratuita**: Gemini 3 Flash, 3.1 Flash-Lite, 2.5 Flash y 2.5 Flash-Lite **se lanzan a la vez y gana la primera respuesta válida**. Los modelos que no existen para tu clave se descartan solos. Si uno se queda sin cuota, descansa 1 minuto. Si todos fallan, se usa Gemma.
+- **Más proveedores gratuitos** (opcionales): con `GROQ_API_KEY` y `CEREBRAS_API_KEY` sus modelos corren en la misma carrera que Gemini; Mistral y OpenRouter quedan de respaldo junto a Gemma. Con solo Groq o Cerebras (sin Gemini) la app funciona, pero sin voz en la nube ni Gemini Live.
+- **Transcripción**: el navegador (Web Speech) y, donde no existe (Firefox, algunos iPhone), grabación + **Whisper de Groq**.
+- **Pronunciación**: Azure Pronunciation Assessment (puntaje por fonema, 5 h/mes gratis) → si no, Gemini escuchando el audio → si no, Whisper + comparación de palabras.
+- **Kokoro**: modelo TTS abierto que corre en un Web Worker (WASM) con `kokoro-js`; se baja de Hugging Face la primera vez y queda guardado en el navegador.
 - **Gemini Live**: el servidor crea un token temporal de un uso y el navegador conecta directo. La clave nunca sale del servidor.
 - **Ligas y recordatorios**: Upstash Redis (capa gratuita) + Web Push con claves VAPID.
 
@@ -34,7 +39,7 @@ api/_lib/          gemini (carrera de modelos), prompts, league, push, store, ht
 src/content/       temas, sonidos, escenarios, gramática, mazo, profesiones, dictado, lecturas, IELTS
 src/lib/           srs, rules, align, game, missions, report, audio, live, recorder, league, push…
 src/views/         Hoy, Hablar, Speak60, Pronunciacion, IeltsMock, Conversar, LiveVoice, Leer, Gramatica, Repaso, Liga, Ajustes, Onboarding
-tests/             unit (Vitest, 122 pruebas) y e2e (Playwright, 22 pruebas con micrófono simulado)
+tests/             unit (Vitest, 141 pruebas) y e2e (Playwright, 21 pruebas × celular y escritorio, micrófono simulado)
 ```
 
 ## Desplegar en Vercel (gratis)
@@ -46,8 +51,10 @@ tests/             unit (Vitest, 122 pruebas) y e2e (Playwright, 22 pruebas con 
    - El plan gratis de Vercel ejecuta el recordatorio **una vez al día** (19:00 hora de Perú, en `vercel.json`).
    - Para avisar a la hora que elige cada persona: crea una tarea gratis en <https://cron-job.org> que cada hora llame a `https://TU-APP.vercel.app/api/cron-remind?mode=hourly&key=TU_CRON_SECRET`.
    - En iPhone las notificaciones solo funcionan con la app instalada (Compartir → Agregar a inicio).
-5. Comprueba en `https://TU-APP.vercel.app/api/health` que `models.tts` y `models.live` no estén vacíos: si lo están, tu clave no tiene acceso a esos modelos y la app usará la voz del navegador (suena más básica).
-6. En el celular abre la URL → **Instalar app / Agregar a pantalla de inicio**.
+5. **Más capacidad gratis** (opcional, recomendado): crea claves sin tarjeta en <https://console.groq.com/keys> (`GROQ_API_KEY`) y <https://cloud.cerebras.ai> (`CEREBRAS_API_KEY`). Groq además activa Whisper y el modo de voz económico en navegadores sin reconocimiento de voz.
+6. **Pronunciación por fonemas** (opcional): en <https://portal.azure.com> crea un recurso **Speech** con plan **Free F0**, y copia `AZURE_SPEECH_KEY` y `AZURE_SPEECH_REGION` (por ejemplo `eastus`).
+7. Comprueba en `https://TU-APP.vercel.app/api/health` que `models.tts` y `models.live` no estén vacíos: si lo están, tu clave no tiene acceso a esos modelos y la app usará la voz del navegador (suena más básica). También muestra `providers`, `stt` y `pronunciation` para saber qué está activo. Si la voz suena básica, descarga **Kokoro** en Ajustes → Voz.
+8. En el celular abre la URL → **Instalar app / Agregar a pantalla de inicio**.
 
 Todas las variables están explicadas en `.env.example`.
 

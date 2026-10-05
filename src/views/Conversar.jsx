@@ -12,7 +12,7 @@ const who = sc => sc.role.split(",")[0].replace(/^an? /, "");
 
 const IELTS = { id: "ielts", name: "Examinador IELTS" };
 
-export default function Conversar({ s, update, today, ai, toast, scen, setScen, mode = "chat", setMode }) {
+export default function Conversar({ s, update, today, ai, toast, server = {}, scen, setScen, mode = "chat", setMode }) {
   const list = scenariosFor(s);
   const sc = list.find(x => x.id === scen) || todaysScenario(today, s);
   const voiceSc = scen === "ielts" ? IELTS : sc;
@@ -65,7 +65,7 @@ export default function Conversar({ s, update, today, ai, toast, scen, setScen, 
           <button type="button" aria-pressed={mode === "chat"} onClick={() => setMode("chat")}>Chat</button>
           <button type="button" aria-pressed={mode === "voice"} onClick={() => setMode("voice")}>Voz en vivo</button>
         </div>
-        {mode === "voice" ? <LiveVoice s={s} update={update} today={today} ai={ai} toast={toast} opts={{ scenario: voiceSc.id }} title={voiceSc.name} /> : <>
+        {mode === "voice" ? <LiveVoice s={s} update={update} today={today} ai={ai} toast={toast} server={server} engine={s.profile.liveEngine || (server.gemini === false ? "economy" : "live")} onEngineChange={v => update(d => { d.profile.liveEngine = v; })} opts={{ scenario: voiceSc.id }} title={voiceSc.name} /> : <>
         <div className="card-head" style={{ margin: 0 }}>
           <h2>{sc.name}</h2>
           <span className={"pill " + (count >= GOAL_TURNS ? "ok" : "neutral")}>{Math.min(count, GOAL_TURNS)} / {GOAL_TURNS} intercambios</span>

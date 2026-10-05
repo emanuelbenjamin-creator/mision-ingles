@@ -507,3 +507,60 @@ test("voz Kokoro: se descarga desde Ajustes y luego suena en los botones", async
   const speak = await page.evaluate(() => window.__kokoroMsgs.find(m => m.type === "speak"));
   expect(speak.voice).toBe("bm_george");
 });
+
+test("modo de voz económico: el coach habla primero, te escucha y responde por turnos", async ({ page }) => {
+  await page.addInitScript(() => {
+    // Reconocimiento falso: cada escucha "oye" una frase distinta tras 300 ms.
+    const said = ["I like football", "Yes, every Sunday"];
+    let n = 0;
+    class FakeSR {
+      start() {
+        const text = said[n++] || "";
+        this._t = setTimeout(() => {
+          if (text && this.onresult) this.onresult({ results: [Object.assign([{ transcript: text }], { isFinal: true })] });
+          if (this.onend) this.onend();
+        }, 300);
+      }
+      abort() { clearTimeout(this._t); }
+      stop() { this.abort(); }
+    }
+    window.SpeechRecognition = FakeSR;
+    window.webkitSpeechRecognition = FakeSR;
+  });
+  await mockApi(page);
+  await page.route("**/api/tts", route => route.fulfill({ status: 200, contentType: "audio/wav", body: wav(0.4) }));
+  const sent = [];
+  await page.route("**/api/voice-turn", route => {
+    const b = route.request().postDataJSON();
+    sent.push(b);
+    const reply = b.turns.length ? `Nice! You said: ${b.turns.at(-1).text}.` : "Hi Ana! What do you like to do on weekends?";
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ reply }) });
+  });
+  await onboard(page);
+  await page.getByTestId("live-cta").click();
+  const setup = page.getByTestId("live-setup");
+  await setup.getByRole("button", { name: "Económico" }).click();
+  await expect(page.getByTestId("eco-note")).toBeVisible();
+  await page.getByRole("button", { name: "Iniciar llamada" }).click();
+  const live = page.getByTestId("live");
+  await expect(live).toContainText("What do you like to do on weekends?");
+  await expect(live).toContainText("I like football", { timeout: 15000 });
+  await expect(live).toContainText("You said: I like football", { timeout: 15000 });
+  await page.getByRole("button", { name: "Colgar" }).click();
+  await expect(live).toContainText("Llamada terminada");
+  expect(sent[0]).toMatchObject({ scenario: "free", turns: [] });
+  expect(sent[1].turns.map(t => t.role)).toEqual(["model", "user"]);
+  // La elección del motor se recuerda
+  await page.reload();
+  await expect(page.getByTestId("eco-note")).toBeVisible();
+});
+
+test("si Gemini Live falla, ofrece seguir en modo económico", async ({ page }) => {
+  await mockApi(page);
+  await page.route("**/api/live-token", route => route.fulfill({ status: 429, contentType: "application/json", body: JSON.stringify({ code: "quota", error: "Se acabó la cuota de voz en vivo." }) }));
+  await onboard(page);
+  await page.getByTestId("live-cta").click();
+  await page.getByRole("button", { name: "Iniciar llamada" }).click();
+  await expect(page.getByTestId("eco-suggest")).toBeVisible();
+  await expect(page.getByTestId("eco-suggest").getByRole("button", { name: "Usar modo económico" })).toBeVisible();
+});

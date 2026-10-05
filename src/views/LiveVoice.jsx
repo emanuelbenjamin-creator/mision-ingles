@@ -3,17 +3,18 @@ import Icon from "../components/Icon.jsx";
 import LiveVisualizer from "../components/LiveVisualizer.jsx";
 import { api } from "../lib/api.js";
 import { liveSupported, startLive } from "../lib/live.js";
+import { economySupported, startEconomy } from "../lib/economy.js";
 import { stopAudio } from "../lib/audio.js";
 import { addMistake, addXP, bumpSkill, completeMission, logSession } from "../lib/game.js";
 
-const STATE_LABEL = { idle: "Listo para llamar", connecting: "Conectando…", listening: "Te escucha · habla cuando quieras", speaking: "Hablando…", ended: "Llamada terminada" };
+const STATE_LABEL = { idle: "Listo para llamar", connecting: "Conectando…", listening: "Te escucha · habla cuando quieras", thinking: "Pensando…", speaking: "Hablando…", ended: "Llamada terminada" };
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
 /**
  * Conversación por voz en tiempo real (Gemini Live) + revisión al final.
  * opts: { scenario, topic?, correction?, pace?, voice? }  ·  title: nombre que se muestra.
  */
-export default function LiveVoice({ s, update, today, ai, toast, opts, title, onLiveChange }) {
+export default function LiveVoice({ s, update, today, ai, toast, opts, title, onLiveChange, server = {}, engine = "live", onEngineChange }) {
   const [status, setStatus] = useState("idle");
   const [turns, setTurns] = useState([]);
   const [secs, setSecs] = useState(0);
@@ -25,7 +26,11 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
   const sess = useRef(null);
   const started = useRef(0);
   const box = useRef(null);
-  const live = status === "connecting" || status === "listening" || status === "speaking";
+  const live = status === "connecting" || status === "listening" || status === "speaking" || status === "thinking";
+  const [suggestEco, setSuggestEco] = useState(false);
+  const liveOK = ai && server.gemini !== false && liveSupported();
+  const ecoOK = ai && economySupported();
+  const useEco = engine === "economy" || (!liveOK && ecoOK);
 
   useEffect(() => { if (onLiveChange) onLiveChange(live); }, [live, onLiveChange]);
   useEffect(() => () => sess.current && sess.current.stop(), []);
@@ -48,8 +53,29 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
     return [...prev, { role, text: text.trim() }];
   });
 
+  const callEconomy = async () => {
+    setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false); setSuggestEco(false);
+    stopAudio();
+    setStatus("connecting");
+    try {
+      setLimit(15);
+      started.current = Date.now();
+      sess.current = await startEconomy({
+        opts, level: s.profile.level, profession: s.profile.profession,
+        onTranscript, onState: setStatus,
+        onError: m => setErr(m),
+        onClose: () => { sess.current = null; setStatus("ended"); },
+      });
+    } catch (e) {
+      sess.current = null;
+      setStatus("idle");
+      setErr(e.message || "No se pudo iniciar la llamada.");
+    }
+  };
+
   const call = async () => {
-    setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false);
+    if (useEco) return callEconomy();
+    setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false); setSuggestEco(false);
     stopAudio();
     setStatus("connecting");
     try {
@@ -66,6 +92,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
       sess.current = null;
       setStatus("idle");
       setErr(e.message || "No se pudo iniciar la llamada.");
+      if (ecoOK) setSuggestEco(true);
     }
   };
 
@@ -96,8 +123,8 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
     setReviewing(false);
   };
 
-  if (!ai) return <p className="hint">La voz en vivo necesita el coach IA (Gemini). Revisa la clave en el servidor o tu código de acceso en Ajustes.</p>;
-  if (!liveSupported()) return <p className="hint">Tu navegador no permite audio en vivo. Usa Chrome, Edge o Safari actualizados.</p>;
+  if (!ai) return <p className="hint">La voz en vivo necesita el coach IA. Revisa las claves en el servidor o tu código de acceso en Ajustes.</p>;
+  if (!liveOK && !ecoOK) return <p className="hint">Tu navegador no permite audio en vivo. Usa Chrome, Edge o Safari actualizados.</p>;
 
   return (
     <div style={{ display: "grid", gap: 14 }} data-testid="live">
@@ -115,7 +142,14 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
         </div>
         <LiveVisualizer getLevels={getLevels} status={status} />
       </div>
+      {useEco && <p className="small muted" data-testid="eco-note">Modo económico: hablan por turnos (el coach no se puede interrumpir). Usa Whisper/reconocimiento del navegador, modelos gratuitos y tu voz elegida.</p>}
       {err && <p className="err">{err}</p>}
+      {suggestEco && !live && (
+        <div className="hint row" style={{ justifyContent: "space-between" }} data-testid="eco-suggest">
+          <span>Gemini Live no está disponible ahora. Puedes seguir practicando en <b>modo económico</b>.</span>
+          <button type="button" className="btn sm" onClick={() => { if (onEngineChange) onEngineChange("economy"); callEconomy(); }}>Usar modo económico</button>
+        </div>
+      )}
       <p className="hint small" data-testid="spanish-bridge">¿No sabes cómo decir algo? <b>Dilo en español</b>: el coach te dice cómo se dice en inglés, te pide repetirlo y siguen en inglés.</p>
       <div className="chat" ref={box} aria-live="polite">
         {turns.length === 0 && <p className="empty">{status === "idle" ? "Al llamar, el coach te saluda primero. Usa audífonos para evitar eco y habla con naturalidad: puedes interrumpirlo como en una llamada real." : "El coach está empezando la llamada… La transcripción aparece aquí."}</p>}

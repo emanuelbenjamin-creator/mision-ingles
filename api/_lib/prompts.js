@@ -119,3 +119,30 @@ export function normalizeReview(o) {
     next_step_es: str(o && o.next_step_es, 400),
   };
 }
+
+/* ---------- Pronunciación con audio ---------- */
+export function pronPrompt(target, lv) {
+  return `The attached audio is an English learner (native Spanish speaker, CEFR ${lv}) reading this sentence aloud:
+"${target}"
+Listen carefully and evaluate ONLY pronunciation (sounds, stress, linking, intonation), not grammar. Be strict but fair: typical Spanish-speaker issues include /θ/ vs /t/, /ɪ/ vs /iː/, /v/ vs /b/, an extra "e" before s+consonant, -ed endings, /ʃ/ vs /tʃ/, /h/ vs /x/, /æ/ vs /ʌ/, and word stress.
+Reply with ONLY a JSON object:
+{"score":0-100,"transcript":"what you actually heard","words":[{"word":"each word of the target sentence, in order","ok":true|false,"issue_es":"si ok es false: qué sonido falló y cómo corregirlo, en español"}],"sounds_to_practice":["/θ/"],"tip_es":"un consejo concreto en español"}
+If the audio is silent or unintelligible, return score 0 and explain it in tip_es.`;
+}
+
+export function normalizePron(o, target) {
+  const tokens = String(target).split(/\s+/).filter(Boolean);
+  const ws = arr(o && o.words, 60);
+  const words = tokens.map((t, i) => {
+    const w = ws[i] || {};
+    return { word: t, ok: w.ok !== false, issue_es: w.ok === false ? str(w.issue_es, 200) : "" };
+  });
+  const sc = Math.round(Number(o && o.score));
+  return {
+    score: Number.isFinite(sc) ? Math.max(0, Math.min(100, sc)) : 0,
+    transcript: str(o && o.transcript, 400),
+    words,
+    sounds_to_practice: arr(o && o.sounds_to_practice, 5).map(x => str(x, 20)).filter(Boolean),
+    tip_es: str(o && o.tip_es, 400),
+  };
+}

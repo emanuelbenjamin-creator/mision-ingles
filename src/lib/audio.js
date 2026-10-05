@@ -99,3 +99,17 @@ export function toggleAudio(text, opts = {}) {
   if (state.id === id && state.status !== "idle") stopAudio();
   else playAudio(text, { ...opts, id });
 }
+
+/** Reproduce una grabación (URL de Blob) con el mismo estado compartido que los demás audios. */
+export async function toggleClip(url, id) {
+  if (state.id === id && state.status !== "idle") { stopAudio(); return; }
+  stopAudio();
+  const my = turn;
+  const a = new Audio(url);
+  const end = () => { if (my === turn) { current = null; setState({ id: null, status: "idle" }); } };
+  a.onended = end;
+  a.onerror = end;
+  current = { stop: () => a.pause() };
+  setState({ id, status: "playing" });
+  try { await a.play(); } catch { end(); }
+}

@@ -162,3 +162,26 @@ test("voz en vivo: muestra la llamada, el examinador IELTS y los errores del ser
   await expect(page.locator(".err")).toContainText("límite de uso de hoy");
   await expect(page.getByRole("button", { name: "Iniciar llamada" })).toBeVisible();
 });
+
+test("pronunciación: grábate, escúchate y Gemini marca las palabras", async ({ page }) => {
+  let sent;
+  await mockApi(page);
+  await page.route("**/api/pron-assess", route => {
+    sent = route.request().postDataJSON();
+    const words = sent.target.split(/\s+/).map((w, i) => ({ word: w, ok: i !== 1, issue_es: i === 1 ? "Pon la lengua entre los dientes para /θ/." : "" }));
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ score: 82, transcript: sent.target, words, sounds_to_practice: ["/θ/"], tip_es: "Más despacio." }) });
+  });
+  await onboard(page);
+  await page.getByTestId("mission-pron").getByRole("button", { name: "Empezar" }).click();
+  const first = page.locator(".sent").first();
+  await first.getByRole("button", { name: "Grábate" }).click();
+  await page.waitForTimeout(1200);
+  await first.getByRole("button", { name: "Detener grabación" }).click();
+  await expect(first.getByRole("button", { name: "Tu voz" })).toBeVisible();
+  await first.getByRole("button", { name: "Evaluar con IA" }).click();
+  await expect(page.getByTestId("pron-ai-0")).toContainText("Pon la lengua entre los dientes");
+  await expect(first.locator(".pill")).toHaveText("82%");
+  await expect(first.locator(".w-miss")).toHaveCount(1);
+  expect(sent.audio.length).toBeGreaterThan(2000);
+  expect(Buffer.from(sent.audio, "base64").toString("ascii", 0, 4)).toBe("RIFF");
+});

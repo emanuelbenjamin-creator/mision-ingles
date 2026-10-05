@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Icon from "./components/Icon.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import UserMenu from "./components/UserMenu.jsx";
+import { HelpModal, UsageModal } from "./components/Modals.jsx";
 import Hoy from "./views/Hoy.jsx";
 import Hablar from "./views/Hablar.jsx";
 import Conversar from "./views/Conversar.jsx";
@@ -20,7 +22,9 @@ import { health, setAccessCode } from "./lib/api.js";
 import { configureAudio, setFallbackHandler } from "./lib/audio.js";
 import { addProfessionCards } from "./lib/state.js";
 
-const TABS = [["hoy", "Hoy"], ["envivo", "En vivo"], ["hablar", "Hablar"], ["conversar", "Conversar"], ["leer", "Escuchar y leer"], ["gramatica", "Gramática"], ["repaso", "Repaso"], ["liga", "Liga"]];
+const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
+const SEP_BEFORE = "repaso";
+const prefersDark = () => typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 const TAB_IDS = ["hoy", "envivo", "hablar", "conversar", "leer", "gramatica", "repaso", "liga"];
 const readTab = () => {
   const h = (typeof location !== "undefined" && location.hash.slice(1)) || "";
@@ -36,6 +40,8 @@ export default function App() {
   const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
+  const [modal, setModal] = useState(null); // "usage" | "help"
+  const [installEvt, setInstallEvt] = useState(null);
   const [league, setLeague] = useState(null);
   const today = dkey();
 
@@ -50,6 +56,27 @@ export default function App() {
   }, [toasts]);
 
   const ai = server.ai && (!server.accessCodeRequired || !!s.profile.accessCode);
+  const theme = s.profile.theme || "system";
+  useEffect(() => {
+    const root = document.documentElement;
+    if (theme === "system") delete root.dataset.theme; else root.dataset.theme = theme;
+    const dark = theme === "dark" || (theme === "system" && prefersDark());
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", dark ? "#0D0F22" : "#1E2350");
+  }, [theme]);
+  const setTheme = t => update(d => { d.profile.theme = t; });
+  const isDark = theme === "dark" || (theme === "system" && prefersDark());
+  useEffect(() => {
+    const onKey = e => { if ((e.ctrlKey || e.metaKey) && e.key === ",") { e.preventDefault(); setSettings(true); } };
+    const onPrompt = e => { e.preventDefault(); setInstallEvt(e); };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("beforeinstallprompt", onPrompt); };
+  }, []);
+  const install = () => {
+    if (installEvt) { installEvt.prompt(); setInstallEvt(null); return; }
+    toast(/iPhone|iPad/.test(navigator.userAgent) ? "En iPhone: botón Compartir → «Agregar a inicio»." : "En el menú del navegador elige «Instalar app» o «Agregar a pantalla de inicio».");
+  };
   const { voiceMode, voice, accent, rate } = s.profile;
   useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, rate, ai }); }, [voiceMode, voice, accent, rate, ai]);
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };
@@ -72,30 +99,39 @@ export default function App() {
   }, [remindersOn, today, s.xpByDay, streakNow, missionsLeft]);
   const common = { s, update, today, ai, toast, server };
 
+  const tabLabel = (TABS.find(t => t[0] === nav.tab) || TABS[0])[1];
   return (
-    <>
-      <header className="top">
-        <div className="wrap">
-          <div className="top-row">
-            <div className="brand"><b>Misión Inglés</b><span className="lvl">{s.profile.level}</span></div>
-            <div className="chips">
-              <span className="chip flame" title="Racha de días"><Icon name="flame" />{streak(s, today)} días</span>
-              <span className="chip" title="XP de hoy" data-testid="xp-chip"><Icon name="bolt" />{xp} / {s.profile.dailyGoal} XP</span>
-              <button type="button" className={"chip " + (ai ? "ai-on" : "ai-off")} onClick={() => setSettings(true)} title="Estado del coach IA">{aiLabel}</button>
-              <button className="iconbtn" type="button" onClick={() => setSettings(true)}>Ajustes</button>
-            </div>
-          </div>
-          {s.profile.onboarded && (
-            <nav className="tabs" role="tablist" aria-label="Secciones">
-              {TABS.map(([id, label]) => (
-                <button key={id} className="tab" role="tab" type="button" aria-selected={nav.tab === id} onClick={() => go({ tab: id })}>{label}</button>
-              ))}
-            </nav>
-          )}
+    <div className="shell">
+      <header className="topbar">
+        <div className="brand-m"><span className="logo-mark" />Misión Inglés</div>
+        <h1 className="page-title">{s.profile.onboarded ? tabLabel : "Bienvenido"}</h1>
+        <div className="chips">
+          <span className="chip flame" title="Racha de días"><Icon name="flame" />{streak(s, today)} días</span>
+          <span className="chip" title="XP de hoy" data-testid="xp-chip"><Icon name="bolt" />{xp} / {s.profile.dailyGoal} XP</span>
+          <button type="button" className={"chip " + (ai ? "ai-on" : "ai-off")} onClick={() => setSettings(true)} title="Estado del coach IA">{aiLabel}</button>
+          <button type="button" className="iconbtn" onClick={() => setTheme(isDark ? "light" : "dark")} aria-label={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"} data-testid="theme-toggle"><Icon name={isDark ? "sun" : "moon"} /></button>
         </div>
+        <UserMenu s={s} theme={theme} setTheme={setTheme} onSettings={() => setSettings(true)} onUsage={() => setModal("usage")} onHelp={() => setModal("help")}
+          onInstall={install} canInstall={!!installEvt} onBackup={() => setSettings(true)} onLogout={null} />
       </header>
+      <aside className="side">
+        <div className="logo"><span className="logo-mark" />Misión <b>Inglés</b></div>
+        {s.profile.onboarded && (
+          <nav className="nav" role="tablist" aria-orientation="vertical" aria-label="Secciones">
+            {TABS.map(([id, label, icon]) => (
+              <Fragment key={id}>
+                {id === SEP_BEFORE && <div className="nav-sep" />}
+                <button className="nav-item" role="tab" type="button" aria-selected={nav.tab === id} onClick={() => go({ tab: id })}><Icon name={icon} />{label}</button>
+              </Fragment>
+            ))}
+          </nav>
+        )}
+        <div className="side-foot">
+          <div className="side-streak"><span className="eyebrow">Racha</span><b>🔥 {streak(s, today)} {streak(s, today) === 1 ? "día" : "días"}</b><span className="small muted">{s.totalXP} XP en total</span></div>
+        </div>
+      </aside>
 
-      <main className="wrap">
+      <main className="content">
         {!s.profile.onboarded ? (
           <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; addProfessionCards(d); return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
         ) : (
@@ -114,8 +150,10 @@ export default function App() {
         )}
       </main>
 
+      {modal === "usage" && <UsageModal s={s} today={today} server={server} onClose={() => setModal(null)} />}
+      {modal === "help" && <HelpModal onClose={() => setModal(null)} />}
       {settings && <Ajustes s={s} update={update} replace={replace} server={server} toast={toast} ai={ai} onClose={() => setSettings(false)} />}
       {toasts.length > 0 && <div className="toast" role="status">{toasts[0]}</div>}
-    </>
+    </div>
   );
 }

@@ -37,6 +37,10 @@ async function onboard(page) {
 }
 
 const xp = page => page.getByTestId("xp-chip");
+async function openSettings(page) {
+  await page.getByTestId("user-menu").click();
+  await page.getByRole("menuitem", { name: /Ajustes/ }).click();
+}
 
 test("primer uso: prueba de nivel y panel", async ({ page }) => {
   await mockApi(page);
@@ -325,7 +329,7 @@ test("recordatorios: activar desde Ajustes registra la suscripción", async ({ p
   let sub;
   await page.route("**/api/push-subscribe", route => { sub = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' }); });
   await onboard(page);
-  await page.getByRole("button", { name: "Ajustes" }).click();
+  await openSettings(page);
   await page.getByTestId("reminders").locator("select").selectOption("20");
   await page.getByTestId("reminders").getByRole("button", { name: "Activar" }).click();
   await expect(page.getByTestId("reminders")).toContainText("a las 20:00");
@@ -374,7 +378,7 @@ test("si la voz natural falla, avisa el motivo y Ajustes lo muestra", async ({ p
   await page.getByRole("tab", { name: "Gramática" }).click();
   await page.locator(".examples li").first().getByRole("button").click();
   await expect(page.locator(".toast")).toContainText("Voz natural no disponible", { timeout: 15000 });
-  await page.getByRole("button", { name: "Ajustes" }).click();
+  await openSettings(page);
   await expect(page.getByRole("dialog")).toContainText("Se acabó la cuota gratuita");
 });
 
@@ -399,4 +403,36 @@ test("En vivo: panel dedicado con modos, tema, voz y llamada", async ({ page }) 
   await page.getByRole("button", { name: "Iniciar llamada" }).click();
   await expect(page.locator(".err")).toContainText("Prueba sin servidor real.");
   expect(tokenReq).toMatchObject({ scenario: "tutor", topic: "Football", pace: "slow", correction: "now", voice: "Charon", level: expect.any(String) });
+});
+
+test("tema oscuro con selector y menú de usuario", async ({ page }) => {
+  await mockApi(page);
+  await onboard(page);
+  const root = page.locator("html");
+  await page.getByTestId("theme-toggle").click();
+  await expect(root).toHaveAttribute("data-theme", /dark|light/);
+  const first = await root.getAttribute("data-theme");
+  const bg1 = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  await page.getByTestId("theme-toggle").click();
+  await expect(root).not.toHaveAttribute("data-theme", first);
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe(bg1);
+  // Menú de usuario: tema, uso, ayuda, cerrar sesión deshabilitado hasta tener cuentas
+  await page.getByTestId("user-menu").click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await expect(page.getByTestId("user-menu")).toContainText("A");
+  await page.getByRole("menuitem", { name: /Tema/ }).click();
+  await page.getByRole("menuitemradio", { name: "Oscuro" }).click();
+  await expect(root).toHaveAttribute("data-theme", "dark");
+  await expect(page.getByTestId("logout")).toBeDisabled();
+  await page.getByRole("menuitem", { name: /Mi uso/ }).click();
+  await expect(page.getByTestId("usage")).toContainText("Consultas al coach");
+  await page.getByTestId("usage").getByRole("button", { name: "Cerrar" }).click();
+  await page.getByTestId("user-menu").click();
+  await page.getByRole("menuitem", { name: /Ayuda/ }).click();
+  await expect(page.getByTestId("help")).toContainText("¿Puedo responder en español?");
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("Control+,");
+  await expect(page.getByRole("dialog", { name: "Ajustes" })).toBeVisible();
+  await page.reload();
+  await expect(root).toHaveAttribute("data-theme", "dark");
 });

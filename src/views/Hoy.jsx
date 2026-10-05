@@ -69,7 +69,7 @@ export default function Hoy({ s, today, go, league, server = {} }) {
           <div className="card">
             <div className="card-head"><h2>Actividad</h2><span className="small muted">XP por día · últimos 14 días</span></div>
             <Chart14 xpByDay={s.xpByDay} goal={goal} today={today} />
-            <p className="small muted" style={{ marginTop: 8 }}>Verde: meta cumplida · ámbar: practicaste pero sin llegar a la meta.</p>
+            <p className="small muted" style={{ marginTop: 8 }}>Morado: meta cumplida · celeste: practicaste sin llegar a la meta.</p>
           </div>
           <WeeklyReport s={s} today={today} />
         </div>
@@ -87,10 +87,23 @@ export default function Hoy({ s, today, go, league, server = {} }) {
               </button>
             ) : <button type="button" className="ielts-chip" onClick={() => go({ tab: "hablar", mode: "ielts" })}>Haz un simulacro IELTS Speaking (+40 XP)</button>}
           </div>
-          <button type="button" className="live-cta" onClick={() => go({ tab: "envivo" })} data-testid="live-cta">
-            <span className="live-cta-orb"><Icon name="mic" /></span>
-            <span><b>Habla en vivo con Gemini</b><span className="small"> Una llamada real con voz natural: conversación libre, profesor, juegos de roles o examen IELTS.</span></span>
-          </button>
+          <div className="card">
+            <div className="card-head"><h2>Accesos rápidos</h2></div>
+            <div className="quick">
+              {[
+                ["live-cta", "mic", "Habla en vivo con Gemini", "Llamada con voz natural", { tab: "envivo" }],
+                ["q-ielts", "trophy", "Simulacro IELTS", "Banda estimada en 12 min", { tab: "hablar", mode: "ielts" }],
+                ["q-read", "headphones", "Escuchar y leer", "Dictado y lectura de hoy", { tab: "leer" }],
+                ["q-review", "cards", "Repaso y lección de errores", "Tus tarjetas pendientes", { tab: "repaso" }],
+              ].map(([tid, icon, t, sub, target]) => (
+                <button type="button" key={tid} className="quick-item" data-testid={tid} onClick={() => go(target)}>
+                  <span className="quick-ic"><Icon name={icon} /></span>
+                  <span className="quick-txt"><b>{t}</b><small>{sub}</small></span>
+                  <Icon name="chevR" />
+                </button>
+              ))}
+            </div>
+          </div>
           {server.leagues && (
             <button type="button" className="league-chip" onClick={() => go({ tab: "liga" })} data-testid="league-chip">
               {league ? <><span><b>Liga {league.division}</b><span className="small muted"> · puesto {league.myRank} de {league.rows.length}</span></span><span className={"pill " + (league.rows[league.myRank - 1]?.zone === "up" ? "ok" : league.rows[league.myRank - 1]?.zone === "down" ? "bad" : "neutral")}>{league.rows[league.myRank - 1]?.zone === "up" ? "Zona de ascenso" : league.rows[league.myRank - 1]?.zone === "down" ? "Zona de descenso" : "Sigue sumando"}</span></>

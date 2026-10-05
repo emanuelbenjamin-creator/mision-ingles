@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { Readable } from "node:stream";
-import { base64ToFloat32, bytesToBase64, downsample, floatToPcm16, rms } from "../../src/lib/live.js";
+import { KICKOFF, base64ToFloat32, bytesToBase64, downsample, floatToPcm16, rms } from "../../src/lib/live.js";
 import { VOICES } from "../../src/content/voices.js";
 import liveToken from "../../api/_routes/live-token.js";
 import chatReview from "../../api/_routes/chat-review.js";
@@ -23,6 +23,9 @@ describe("conversión de audio para Gemini Live", () => {
     expect(Array.from(out).map(x => +x.toFixed(2))).toEqual([0.3, 1]);
     const same = new Float32Array([0.1]);
     expect(downsample(same, 16000, 16000)).toBe(same);
+  });
+  it("mensaje de inicio para que el coach hable primero", () => {
+    expect(KICKOFF).toMatch(/greet them/);
   });
   it("rms mide el volumen", () => {
     expect(rms(new Float32Array([0.5, -0.5, 0.5, -0.5]))).toBeCloseTo(0.5);
@@ -80,6 +83,14 @@ describe("API live-token", () => {
     const cfg = created[0].config.liveConnectConstraints.config;
     expect(cfg.systemInstruction).toContain("speaking tutor");
     expect(cfg.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Kore");
+  });
+  it("el coach abre la llamada y usa el puente desde el español", async () => {
+    await call(liveToken, { scenario: "free" });
+    const sys = created[0].config.liveConnectConstraints.config.systemInstruction;
+    expect(sys).toContain("You open the call");
+    expect(sys).toContain("SPANISH BRIDGE");
+    expect(sys).toContain("Can you say it?");
+    expect(sys).toContain("Never switch the conversation to Spanish");
   });
   it("modo examinador IELTS", async () => {
     await call(liveToken, { scenario: "ielts" });

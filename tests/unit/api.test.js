@@ -87,6 +87,7 @@ describe("API de conversación y gramática", () => {
     expect(r.body.reply).toMatch(/Why do you want/);
     expect(r.body.correction.corrected).toBe("I am 30 years old.");
     expect(lastCall.system).toContain(SCENARIOS[0].role);
+    expect(lastCall.system).toContain("Así se dice en inglés:");
     expect(lastCall.contents[0].role).toBe("user");
     expect(lastCall.contents.at(-1)).toEqual({ role: "user", text: "I have 30 years" });
   });

@@ -53,6 +53,9 @@ export function rms(f32) {
   return Math.sqrt(sum / f32.length);
 }
 
+/** Mensaje inicial para que el coach empiece la llamada sin esperar al alumno. */
+export const KICKOFF = "(The learner has just joined the call and is listening. Start now: greet them and ask your first question.)";
+
 export const liveSupported = () => typeof window !== "undefined" && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.AudioContext && window.AudioWorkletNode);
 
 const WORKLET = `class PcmCapture extends AudioWorkletProcessor {
@@ -64,7 +67,7 @@ registerProcessor("pcm-capture", PcmCapture);`;
  * Inicia la sesión. Callbacks: onTranscript(role, text), onState("connecting"|"listening"|"speaking"),
  * onError(mensaje), onClose(). Devuelve { stop(), setMuted(bool) }.
  */
-export async function startLive({ token, model, config, onTranscript, onState, onError, onClose }) {
+export async function startLive({ token, model, config, onTranscript, onState, onError, onClose, kickoff = KICKOFF }) {
   onState("connecting");
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: "v1alpha" } });
@@ -112,6 +115,11 @@ export async function startLive({ token, model, config, onTranscript, onState, o
       onclose: () => { if (!closed) { closed = true; cleanup(); onClose(); } },
     },
   });
+
+  // El coach habla primero: se le avisa que el alumno ya entró a la llamada.
+  if (kickoff) {
+    try { session.sendClientContent({ turns: [{ role: "user", parts: [{ text: kickoff }] }], turnComplete: true }); } catch { /* si falla, igual espera al alumno */ }
+  }
 
   let stream, inCtx, node, srcNode, workletUrl;
   try {

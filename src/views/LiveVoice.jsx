@@ -116,8 +116,9 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
         <LiveVisualizer getLevels={getLevels} status={status} />
       </div>
       {err && <p className="err">{err}</p>}
+      <p className="hint small" data-testid="spanish-bridge">¿No sabes cómo decir algo? <b>Dilo en español</b>: el coach te dice cómo se dice en inglés, te pide repetirlo y siguen en inglés.</p>
       <div className="chat" ref={box} aria-live="polite">
-        {turns.length === 0 && <p className="empty">{status === "idle" ? "Usa audífonos para evitar eco. Habla con naturalidad: puedes interrumpir al coach como en una llamada real." : "La transcripción aparece aquí mientras hablan."}</p>}
+        {turns.length === 0 && <p className="empty">{status === "idle" ? "Al llamar, el coach te saluda primero. Usa audífonos para evitar eco y habla con naturalidad: puedes interrumpirlo como en una llamada real." : "El coach está empezando la llamada… La transcripción aparece aquí."}</p>}
         {turns.map((t, i) => (
           <div key={i} className={"msg " + (t.role === "user" ? "me" : "ai")}>
             <span className="who">{t.role === "user" ? "Tú" : title}</span>

@@ -5,9 +5,22 @@ export class ApiError extends Error {
 }
 
 let accessCode = "";
+
+/* Conteo local de consultas por día (para «Mi uso»). */
+const NO_COUNT = new Set(["health", "league", "push-subscribe"]);
+const bucketOf = path => (path === "tts" ? "tts" : path === "live-token" ? "live" : "ai");
+const usageKey = () => { const d = new Date(); return `mi-usage-${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`; };
+export function getUsage() {
+  try { return { ai: 0, tts: 0, live: 0, ...JSON.parse(localStorage.getItem(usageKey()) || "{}") }; } catch { return { ai: 0, tts: 0, live: 0 }; }
+}
+function countUsage(path) {
+  if (NO_COUNT.has(path)) return;
+  try { const u = getUsage(); u[bucketOf(path)]++; localStorage.setItem(usageKey(), JSON.stringify(u)); } catch { /* sin almacenamiento */ }
+}
 export const setAccessCode = c => { accessCode = c || ""; };
 
 export async function api(path, body, { signal } = {}) {
+  countUsage(path);
   let res;
   try {
     res = await fetch("/api/" + path, {
@@ -33,6 +46,7 @@ export async function health() {
 
 /** Igual que api() pero devuelve el cuerpo como Blob (audio). */
 export async function apiBlob(path, body, { signal } = {}) {
+  countUsage(path);
   let res;
   try {
     res = await fetch("/api/" + path, {

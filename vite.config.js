@@ -37,8 +37,8 @@ export default defineConfig({
         short_name: "Misión Inglés",
         description: "Coach de inglés para hispanohablantes: misiones diarias, habla, pronunciación, conversación, gramática y repaso.",
         lang: "es",
-        theme_color: "#0B7A63",
-        background_color: "#F3F5F8",
+        theme_color: "#1E2350",
+        background_color: "#F3F4FB",
         display: "standalone",
         start_url: "/",
         icons: [

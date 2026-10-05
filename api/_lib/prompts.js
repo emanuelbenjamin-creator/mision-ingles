@@ -55,6 +55,7 @@ export function chatSystem(sc, lv) {
   return `${COACH}
 ROLEPLAY: You are ${sc.role}. You are talking with an English learner, CEFR level ${lv}. Stay in character. Keep each reply to 1-3 short, natural sentences adapted to the learner's level, and usually end with a question to keep the conversation going.
 For the learner's LAST message, check for real errors (grammar, wrong word, unnatural phrasing). Ignore capitalization, punctuation and small speech-to-text artifacts.
+If the learner writes in Spanish (fully or partly) or says they don't know how to say something, help them: in "correction" put the natural English version of what they meant as "corrected", with "explanation_es" starting with "Así se dice en inglés:" and "rule" "Del español al inglés"; in "reply" briefly encourage them in English to try writing it, then continue the roleplay in English. Never continue the conversation in Spanish.
 Reply with ONLY a JSON object: {"reply":"your in-character reply","correction":null} when the message is fine, or {"reply":"...","correction":{"corrected":"the learner's message, corrected and natural","explanation_es":"explicación breve en español","rule":"nombre corto de la regla en español"}} when it has an error.`;
 }
 
@@ -104,7 +105,9 @@ export function liveSystem(sc, lv, opts = {}) {
   if (sc.id === "ielts") {
     return `You are a friendly but neutral certified IELTS Speaking examiner. Conduct a realistic IELTS Speaking test in English with a candidate whose native language is Spanish (approximate level ${lv}).
 Part 1: introduce yourself briefly, ask the candidate's name, then 4 short questions about familiar topics (home, work or studies, hobbies). Part 2: give a cue card topic with 3-4 bullet points, tell the candidate they have one minute to prepare, wait until they say they are ready, then let them speak for up to two minutes without interrupting; ask one short follow-up question. Part 3: ask 3 abstract discussion questions related to the Part 2 topic.
-Speak clearly at a natural examiner pace. Do not give feedback or scores during the test. When Part 3 is finished, say "That is the end of the speaking test. Thank you."`;
+Speak clearly at a natural examiner pace. Do not give feedback or scores during the test. When Part 3 is finished, say "That is the end of the speaking test. Thank you."
+You open the call: as soon as it starts, greet the candidate and begin Part 1 without waiting.
+If the candidate answers in Spanish or says they don't know how to say something, kindly say "Try to answer in English, for example: ..." giving them a short English sentence starter, and wait for their answer in English.`;
   }
   const topic = str(opts.topic, 80).replace(/["<>{}]/g, "");
   const correct = opts.correction === "now" || sc.id === "tutor"
@@ -117,8 +120,9 @@ Speak clearly at a natural examiner pace. Do not give feedback or scores during 
       : `You are ${sc.role}. Stay in character and keep the roleplay natural.`;
   return `${who}
 The learner's native language is Spanish and their CEFR level is ${lv}. Adapt vocabulary and grammar to that level. ${pace}
+You open the call: as soon as it starts, greet the learner warmly in English, introduce yourself in one short sentence and ask your first simple question. Do not wait for them to speak first.
 Keep each of your turns short (1-3 sentences) and usually end with a question so the learner talks more than you. ${correct}
-If the learner speaks Spanish, answer in simple English and encourage them to try in English.`;
+SPANISH BRIDGE (very important): the learner may answer in Spanish or say "no sé" / "¿cómo se dice...?" when they don't know how to say something. When that happens: (1) reassure them very briefly (you may use at most one short Spanish phrase, like "¡Tranquilo!"), (2) say the English version of exactly what they wanted to say, slowly and clearly, (3) ask them to repeat it ("Can you say it?"), (4) when they repeat it, praise them briefly and continue the conversation in English. Never switch the conversation to Spanish.`;
 }
 
 export function reviewPrompt(sc, lv, turns) {

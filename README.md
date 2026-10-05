@@ -5,6 +5,8 @@ Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne l
 | Sección | Qué hace |
 |---|---|
 | **En vivo** | Panel dedicado a **Gemini Live**: conversación libre (con tema), profesor de speaking que corrige al momento, juegos de roles o examinador IELTS; ritmo natural o lento; **30 voces** para elegir y escuchar antes; visualizador de voz, transcripción, revisión al colgar e historial de llamadas |
+| **Diseño** | Menú lateral, tarjetas suaves y acentos morado → azul → cian; **tema claro, oscuro o según el dispositivo** (botón ☾/☀ y menú de usuario) |
+| **Menú de usuario** | Ajustes (Ctrl+,), Mi uso (consultas de hoy vs. límite gratis), Tema, Idioma, Ayuda, Instalar la app, Copia de seguridad y Cerrar sesión (se activa cuando haya cuentas de usuario) |
 | **Hoy** | Meta diaria de XP, racha, gráfico de 14 días, ruta MCER, habilidades, **reporte semanal**, liga, último IELTS, errores frecuentes y logros |
 | **Misiones diarias** | 4 principales (habla 60 s, sonido del día, gramática, repaso) + bonus (conversación, dictado, lectura) |
 | **Hablar** | Habla 60 s con evaluación (fluidez, gramática, vocabulario, coherencia), **pronunciación grabando tu voz** (Gemini escucha y marca cada palabra) y **simulacro IELTS Speaking** con las 4 bandas oficiales |

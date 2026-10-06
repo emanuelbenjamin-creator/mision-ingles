@@ -4,7 +4,7 @@ import { getUsage } from "../lib/api.js";
 import { weekStart } from "../lib/report.js";
 import { addDays } from "../lib/dates.js";
 
-function Sheet({ title, onClose, children, testid }) {
+export function Sheet({ title, onClose, children, testid }) {
   useEffect(() => {
     const onKey = e => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", onKey);

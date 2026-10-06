@@ -5,7 +5,8 @@ import MicButton from "../components/MicButton.jsx";
 import { IELTS_SETS } from "../content/ielts.js";
 import { hash } from "../lib/dates.js";
 import { words } from "../lib/align.js";
-import { api } from "../lib/api.js";
+import { aiOf, api } from "../lib/api.js";
+import { ModelTag } from "../components/Diag.jsx";
 import { canRecord, startRecording } from "../lib/recorder.js";
 import { stopAudio } from "../lib/audio.js";
 import { addMistake, completeMission, logSession } from "../lib/game.js";
@@ -181,6 +182,7 @@ export default function IeltsMock({ s, update, today, ai, toast }) {
         {result && (
           <div style={{ display: "grid", gap: 14 }} data-testid="ielts-result">
             <div className="band-hero"><span className="eyebrow">Banda global estimada</span><b>{result.overall?.toFixed(1)}</b></div>
+            <ModelTag ev={aiOf(result)} />
             <div className="bands">
               {CRITERIA.map(([k, n]) => (
                 <div key={k} className="band-row">

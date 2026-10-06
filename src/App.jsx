@@ -3,6 +3,8 @@ import Icon from "./components/Icon.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import UserMenu from "./components/UserMenu.jsx";
 import { HelpModal, UsageModal } from "./components/Modals.jsx";
+import { DiagBar, ModelsModal } from "./components/Diag.jsx";
+import { setDiag } from "./lib/trace.js";
 import Hoy from "./views/Hoy.jsx";
 import Hablar from "./views/Hablar.jsx";
 import Conversar from "./views/Conversar.jsx";
@@ -42,7 +44,7 @@ export default function App() {
   const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
-  const [modal, setModal] = useState(null); // "usage" | "help"
+  const [modal, setModal] = useState(null); // "usage" | "help" | "models"
   const [installEvt, setInstallEvt] = useState(null);
   const [league, setLeague] = useState(null);
   const today = dkey();
@@ -50,6 +52,7 @@ export default function App() {
   useEffect(() => { health().then(h => { configureSpeech({ stt: !!h.stt }); setServer({ ...h, checked: true }); }); }, []);
   useEffect(() => { setFallbackHandler(reason => toast("Voz natural no disponible ahora: " + reason + " Suena la voz del navegador.")); }, [toast]);
   useEffect(() => { setAccessCode(s.profile.accessCode); }, [s.profile.accessCode]);
+  useEffect(() => { setDiag(!!s.profile.diag); }, [s.profile.diag]);
   useEffect(() => { try { sessionStorage.setItem("mi-tab", nav.tab); } catch { /* sin almacenamiento */ } }, [nav.tab]);
   useEffect(() => {
     if (!toasts.length) return undefined;
@@ -116,7 +119,7 @@ export default function App() {
           <button type="button" className={"chip " + (ai ? "ai-on" : "ai-off")} onClick={() => setSettings(true)} title="Estado del coach IA">{aiLabel}</button>
           <button type="button" className="iconbtn" onClick={() => setTheme(isDark ? "light" : "dark")} aria-label={isDark ? "Cambiar a tema claro" : "Cambiar a tema oscuro"} data-testid="theme-toggle"><Icon name={isDark ? "sun" : "moon"} /></button>
         </div>
-        <UserMenu s={s} theme={theme} setTheme={setTheme} onSettings={() => setSettings(true)} onUsage={() => setModal("usage")} onHelp={() => setModal("help")}
+        <UserMenu s={s} theme={theme} setTheme={setTheme} onSettings={() => setSettings(true)} onUsage={() => setModal("usage")} onHelp={() => setModal("help")} onModels={() => setModal("models")}
           onInstall={install} canInstall={!!installEvt} onBackup={() => setSettings(true)} onLogout={null} />
       </header>
       <aside className="side">
@@ -157,6 +160,8 @@ export default function App() {
 
       {modal === "usage" && <UsageModal s={s} today={today} server={server} onClose={() => setModal(null)} />}
       {modal === "help" && <HelpModal onClose={() => setModal(null)} />}
+      {modal === "models" && <ModelsModal server={server} onClose={() => setModal(null)} onToggle={v => update(d => { d.profile.diag = v; })} />}
+      <DiagBar onOpen={() => setModal("models")} />
       {settings && <Ajustes s={s} update={update} replace={replace} server={server} toast={toast} ai={ai} onClose={() => setSettings(false)} />}
       {toasts.length > 0 && <div className="toast" role="status">{toasts[0]}</div>}
     </div>

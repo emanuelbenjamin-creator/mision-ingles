@@ -564,3 +564,41 @@ test("si Gemini Live falla, ofrece seguir en modo económico", async ({ page }) 
   await expect(page.getByTestId("eco-suggest")).toBeVisible();
   await expect(page.getByTestId("eco-suggest").getByRole("button", { name: "Usar modo económico" })).toBeVisible();
 });
+
+test("modo diagnóstico: muestra qué modelo respondió cada mensaje y audio, y exporta el registro", async ({ page }) => {
+  const trace = calls => encodeURIComponent(JSON.stringify(calls));
+  await mockApi(page);
+  await page.route("**/api/chat-turn", route => route.fulfill({
+    status: 200, contentType: "application/json",
+    headers: { "X-AI-Model": "groq:llama-3.3-70b-versatile", "X-AI-Trace": trace([{ k: "text", m: "groq:llama-3.3-70b-versatile", ms: 640, tier: "principal", t: [{ m: "groq:llama-3.3-70b-versatile", r: "ok", ms: 640 }, { m: "gemini-2.5-flash", r: "lost", ms: 640 }, { m: "gemini-3-flash-preview", r: "429", ms: 90 }] }]) },
+    body: JSON.stringify({ reply: "Great choice! Anything else?", correction: null }),
+  }));
+  await page.route("**/api/tts", route => route.fulfill({ status: 200, contentType: "audio/wav", headers: { "X-AI-Trace": trace([{ k: "tts", m: "gemini-2.5-flash-preview-tts", ms: 1500, t: [{ m: "gemini-2.5-flash-preview-tts", r: "ok", ms: 1500 }] }]) }, body: wav(2) }));
+  await onboard(page);
+  await page.getByTestId("user-menu").click();
+  await page.getByTestId("models-item").click();
+  await page.getByTestId("diag-toggle").check();
+  await page.getByTestId("models").getByRole("button", { name: "Cerrar" }).click();
+  await expect(page.getByTestId("diag-bar")).toBeVisible();
+
+  await page.getByRole("tab", { name: "Conversar" }).click();
+  await page.locator("#chatIn").fill("I would like a coffee");
+  await page.getByRole("button", { name: "Enviar" }).click();
+  const tag = page.getByTestId("chat").getByTestId("model-tag");
+  await expect(tag).toContainText("groq:llama-3.3-70b-versatile · 640 ms");
+  await expect(tag).toHaveAttribute("title", /gemini-3-flash-preview 429/);
+  await page.getByTestId("chat").getByRole("button", { name: "Escuchar" }).last().click();
+  await expect(page.getByTestId("diag-bar")).toContainText("gemini-2.5-flash-preview-tts", { timeout: 10000 });
+
+  await page.getByTestId("diag-bar").getByRole("button", { name: "Ver todo" }).click();
+  const summary = page.getByTestId("models-summary");
+  await expect(summary).toContainText("groq:llama-3.3-70b-versatile");
+  await expect(summary.locator("tr", { hasText: "gemini-3-flash-preview" })).toContainText("sin cuota");
+  const dl = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Descargar CSV" }).click();
+  expect((await dl).suggestedFilename()).toMatch(/^modelos-.*\.csv$/);
+
+  // Se recuerda al recargar
+  await page.reload();
+  await expect(page.getByTestId("diag-bar")).toBeVisible();
+});

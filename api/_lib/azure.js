@@ -3,6 +3,8 @@
  * Puntaje por fonema, palabra, precisión, fluidez y completitud. Se activa con
  * AZURE_SPEECH_KEY y AZURE_SPEECH_REGION.
  */
+import { note, outcomeOf } from "./trace.js";
+
 let fetchImpl = (...a) => fetch(...a);
 /** Solo para pruebas: reemplaza fetch. */
 export const _setAzureFetch = f => { fetchImpl = f || ((...a) => fetch(...a)); };
@@ -15,17 +17,25 @@ export async function azurePronunciation({ audio, target }) {
   const region = process.env.AZURE_SPEECH_REGION, key = process.env.AZURE_SPEECH_KEY;
   const cfg = { ReferenceText: target, GradingSystem: "HundredMark", Granularity: "Phoneme", Dimension: "Comprehensive", EnableMiscue: true, PhonemeAlphabet: "IPA" };
   const url = `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
-  const res = await fetchImpl(url, {
-    method: "POST",
-    headers: {
-      "Ocp-Apim-Subscription-Key": key,
-      "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
-      "Pronunciation-Assessment": Buffer.from(JSON.stringify(cfg)).toString("base64"),
-      Accept: "application/json",
-    },
-    body: Buffer.from(audio, "base64"),
-  });
-  if (!res.ok) throw Object.assign(new Error(`azure ${res.status}`), { status: res.status });
+  const t0 = Date.now();
+  let res;
+  try {
+    res = await fetchImpl(url, {
+      method: "POST",
+      headers: {
+        "Ocp-Apim-Subscription-Key": key,
+        "Content-Type": "audio/wav; codecs=audio/pcm; samplerate=16000",
+        "Pronunciation-Assessment": Buffer.from(JSON.stringify(cfg)).toString("base64"),
+        Accept: "application/json",
+      },
+      body: Buffer.from(audio, "base64"),
+    });
+    if (!res.ok) throw Object.assign(new Error(`azure ${res.status}`), { status: res.status });
+  } catch (e) {
+    note({ kind: "pron", model: null, ms: Date.now() - t0, tried: [{ m: "azure:pronunciation", r: outcomeOf(e), ms: Date.now() - t0 }] });
+    throw e;
+  }
+  note({ kind: "pron", model: "azure:pronunciation", ms: Date.now() - t0 });
   const d = await res.json();
   const tokens = String(target).split(/\s+/).filter(Boolean);
   if (!d || d.RecognitionStatus !== "Success" || !d.NBest || !d.NBest[0]) {

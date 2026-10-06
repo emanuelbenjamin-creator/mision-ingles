@@ -17,6 +17,7 @@ Coach de inglés para hispanohablantes, instalable en el celular (PWA). Reúne l
 | **Liga** | Ligas semanales Bronce → Diamante: los 5 primeros suben y los 5 últimos bajan |
 | **Profesión** | Vocabulario, temas y conversaciones de Contabilidad y tributos, Ventas, Tecnología, Salud o Turismo |
 | **Voces** | Gemini (nube, 30 voces), **Kokoro** (82M, se descarga una vez ~90 MB y funciona sin internet ni límites) o la del navegador. Si Gemini falla, se usa Kokoro antes que la del navegador |
+| **Modelos (diagnóstico)** | Menú de usuario → *Modelos (diagnóstico)*. Al activarlo, cada respuesta y cada audio muestran qué modelo respondió y en cuánto tiempo. Una barra flotante muestra los últimos eventos. El panel resume, por modelo, cuántas veces ganó, llegó tarde o falló y por qué (sin cuota, no existe, tiempo agotado, respuesta inválida), con el tiempo medio y en qué secciones gana. Exporta CSV o JSON |
 | **Recordatorios** | Notificación si tu racha está en riesgo |
 
 Todos los botones de audio cambian a **Detener** y se ponen **verdes con una barra de avance** mientras suenan (barra animada mientras carga la voz natural). En Ajustes eliges entre las 30 voces de Gemini y ves si estás escuchando la voz natural o la del navegador, y por qué. Las voces son las naturales de Gemini, con la voz del navegador como respaldo. Sin IA, la app sigue funcionando en **modo básico** (20 reglas de errores típicos, dictado, repaso, gramática).
@@ -30,6 +31,7 @@ Todos los botones de audio cambian a **Detener** y se ponen **verdes con una bar
 - **Transcripción**: el navegador (Web Speech) y, donde no existe (Firefox, algunos iPhone), grabación + **Whisper de Groq**.
 - **Pronunciación**: Azure Pronunciation Assessment (puntaje por fonema, 5 h/mes gratis) → si no, Gemini escuchando el audio → si no, Whisper + comparación de palabras.
 - **Kokoro**: modelo TTS abierto que corre en un Web Worker (WASM) con `kokoro-js`; se baja de Hugging Face la primera vez y queda guardado en el navegador.
+- **Diagnóstico**: cada respuesta de `/api/*` lleva los encabezados `X-AI-Model` (el modelo ganador) y `X-AI-Trace` (JSON con todos los intentos de la carrera). En los logs de Vercel aparece una línea `[ai] <ruta> <estado> ...` por llamada, que puedes filtrar buscando `[ai]`.
 - **Gemini Live**: el servidor crea un token temporal de un uso y el navegador conecta directo. La clave nunca sale del servidor.
 - **Ligas y recordatorios**: Upstash Redis (capa gratuita) + Web Push con claves VAPID.
 
@@ -39,7 +41,7 @@ api/_lib/          gemini (carrera de modelos), prompts, league, push, store, ht
 src/content/       temas, sonidos, escenarios, gramática, mazo, profesiones, dictado, lecturas, IELTS
 src/lib/           srs, rules, align, game, missions, report, audio, live, recorder, league, push…
 src/views/         Hoy, Hablar, Speak60, Pronunciacion, IeltsMock, Conversar, LiveVoice, Leer, Gramatica, Repaso, Liga, Ajustes, Onboarding
-tests/             unit (Vitest, 141 pruebas) y e2e (Playwright, 21 pruebas × celular y escritorio, micrófono simulado)
+tests/             unit (Vitest, 146 pruebas) y e2e (Playwright, 22 pruebas × celular y escritorio, micrófono simulado)
 ```
 
 ## Desplegar en Vercel (gratis)

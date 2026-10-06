@@ -1,4 +1,5 @@
-import { api } from "./api.js";
+import { aiOf, api } from "./api.js";
+import { recordLocal } from "./trace.js";
 import { speakAndWait, stopAudio } from "./audio.js";
 import { canRecognize, canServerTranscribe } from "./speech.js";
 import { canRecord, startRecording } from "./recorder.js";
@@ -50,7 +51,7 @@ export async function startEconomy({ opts, level, profession, onTranscript, onSt
       const r = await api("voice-turn", { ...opts, level, profession, turns });
       if (closed) return;
       turns.push({ role: "model", text: r.reply });
-      onTranscript("model", r.reply);
+      onTranscript("model", r.reply, aiOf(r));
       onState("speaking");
       speaking = true;
       await speakAndWait(r.reply);
@@ -79,7 +80,8 @@ export async function startEconomy({ opts, level, profession, onTranscript, onSt
     let text = "";
     r.onresult = ev => { for (const x of ev.results) if (x.isFinal) text += " " + x[0].transcript; };
     r.onerror = ev => { if (ev.error === "not-allowed") onError("El navegador bloqueó el micrófono."); };
-    r.onend = () => { rec = null; heard(text); };
+    const t0 = Date.now();
+    r.onend = () => { rec = null; if (text.trim()) recordLocal({ route: "web-speech", kind: "stt", model: "navegador (Web Speech)", ms: Date.now() - t0 }); heard(text); };
     rec = { stop: () => { try { r.abort(); } catch { /* nada */ } } };
     try { r.start(); } catch { setTimeout(listen, 500); }
   }

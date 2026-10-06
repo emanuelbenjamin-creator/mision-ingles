@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "../components/Icon.jsx";
 import LiveVisualizer from "../components/LiveVisualizer.jsx";
-import { api } from "../lib/api.js";
+import { aiOf, api } from "../lib/api.js";
+import { ModelTag } from "../components/Diag.jsx";
 import { liveSupported, startLive } from "../lib/live.js";
 import { economySupported, startEconomy } from "../lib/economy.js";
 import { stopAudio } from "../lib/audio.js";
@@ -23,6 +24,8 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
   const [review, setReview] = useState(null);
   const [reviewing, setReviewing] = useState(false);
   const [err, setErr] = useState("");
+  const [model, setModel] = useState(""); // modelo de la llamada (diagnóstico)
+  const [reviewAi, setReviewAi] = useState(null);
   const sess = useRef(null);
   const started = useRef(0);
   const box = useRef(null);
@@ -47,16 +50,17 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
 
   const getLevels = useCallback(() => (sess.current && sess.current.levels ? sess.current.levels() : { user: 0, model: 0 }), []);
 
-  const onTranscript = (role, text) => setTurns(prev => {
+  const onTranscript = (role, text, ai) => setTurns(prev => {
     const last = prev[prev.length - 1];
-    if (last && last.role === role) return [...prev.slice(0, -1), { role, text: (last.text + " " + text).replace(/\s+/g, " ").trim() }];
-    return [...prev, { role, text: text.trim() }];
+    if (last && last.role === role) return [...prev.slice(0, -1), { role, text: (last.text + " " + text).replace(/\s+/g, " ").trim(), ai: ai || last.ai }];
+    return [...prev, { role, text: text.trim(), ai }];
   });
 
   const callEconomy = async () => {
     setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false); setSuggestEco(false);
     stopAudio();
     setStatus("connecting");
+    setModel("económico: modelos de texto en carrera + voz elegida");
     try {
       setLimit(15);
       started.current = Date.now();
@@ -81,6 +85,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
     try {
       const t = await api("live-token", { level: s.profile.level, profession: s.profile.profession, voice: s.profile.liveVoice || s.profile.voice, ...opts });
       setLimit(t.minutes);
+      setModel("Gemini Live · " + t.model);
       started.current = Date.now();
       sess.current = await startLive({
         token: t.token, model: t.model, config: t.config,
@@ -107,6 +112,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
     try {
       const r = await api("chat-review", { scenario: opts.scenario, level: s.profile.level, turns });
       setReview(r);
+      setReviewAi(aiOf(r));
       const minutes = Math.max(1, Math.round(secs / 60));
       update(d => {
         r.corrections.forEach(x => addMistake(d, { wrong: x.original, right: x.corrected, why: x.explanation_es, rule: x.rule, src: "voz en vivo" }, today));
@@ -134,6 +140,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
           <div className="eyebrow">{title}</div>
           <b>{STATE_LABEL[status]}</b>
           {live && status !== "connecting" && <div className="small muted mono">{mmss(secs)} / {limit}:00</div>}
+          {model && status !== "idle" && <ModelTag text={model} />}
         </div>
         <div className="row" style={{ marginLeft: "auto" }}>
           {live && <button type="button" className="btn ghost sm" onClick={() => { const m = !muted; setMuted(m); if (sess.current) sess.current.setMuted(m); }}>{muted ? "Activar micrófono" : "Silenciar"}</button>}
@@ -157,6 +164,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
           <div key={i} className={"msg " + (t.role === "user" ? "me" : "ai")}>
             <span className="who">{t.role === "user" ? "Tú" : title}</span>
             <div className="bub">{t.text}</div>
+            {t.role !== "user" && <ModelTag ev={t.ai} />}
           </div>
         ))}
       </div>
@@ -166,6 +174,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
       {review && (
         <div className="card" style={{ display: "grid", gap: 12 }} data-testid="live-review">
           <h3>Tu revisión</h3>
+          <ModelTag ev={reviewAi} />
           {review.summary_es && <p>{review.summary_es}</p>}
           <div className="scores" style={{ gridTemplateColumns: "repeat(3,minmax(0,1fr))" }}>
             {[["fluency", "Fluidez"], ["grammar", "Gramática"], ["vocabulary", "Vocabulario"]].map(([k, n]) => <div className="score" key={k}><b>{review[k] ?? "—"}</b><span>{n}</span></div>)}

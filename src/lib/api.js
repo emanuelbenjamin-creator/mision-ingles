@@ -1,4 +1,14 @@
 /* Cliente de las funciones serverless (/api/*). La clave de Gemini nunca llega al navegador. */
+import { recordCall } from "./trace.js";
+
+/** Registra qué modelo respondió (modo diagnóstico) y lo adjunta como propiedad oculta _ai. */
+function traced(path, res, t0, target) {
+  const ev = recordCall({ route: path, status: res.status, ms: Date.now() - t0, header: res.headers && res.headers.get && res.headers.get("X-AI-Trace") });
+  if (ev && target && typeof target === "object") { try { Object.defineProperty(target, "_ai", { value: ev, enumerable: false }); } catch { /* objeto congelado */ } }
+  return ev;
+}
+/** Qué modelo produjo esta respuesta de api()/apiBlob() (o null). */
+export const aiOf = x => (x && x._ai) || null;
 
 export class ApiError extends Error {
   constructor(code, message) { super(message); this.code = code; }
@@ -21,6 +31,7 @@ export const setAccessCode = c => { accessCode = c || ""; };
 
 export async function api(path, body, { signal } = {}) {
   countUsage(path);
+  const t0 = Date.now();
   let res;
   try {
     res = await fetch("/api/" + path, {
@@ -35,7 +46,8 @@ export async function api(path, body, { signal } = {}) {
   }
   let data = null;
   try { data = await res.json(); } catch { /* respuesta vacía */ }
-  if (!res.ok) throw new ApiError((data && data.code) || "server", (data && data.error) || "El coach no respondió. Inténtalo otra vez.");
+  const ev = traced(path, res, t0, data);
+  if (!res.ok) throw Object.assign(new ApiError((data && data.code) || "server", (data && data.error) || "El coach no respondió. Inténtalo otra vez."), { _ai: ev });
   return data;
 }
 
@@ -47,6 +59,7 @@ export async function health() {
 /** Igual que api() pero devuelve el cuerpo como Blob (audio). */
 export async function apiBlob(path, body, { signal } = {}) {
   countUsage(path);
+  const t0 = Date.now();
   let res;
   try {
     res = await fetch("/api/" + path, {
@@ -62,7 +75,10 @@ export async function apiBlob(path, body, { signal } = {}) {
   if (!res.ok) {
     let data = null;
     try { data = await res.json(); } catch { /* sin cuerpo */ }
-    throw new ApiError((data && data.code) || "server", (data && data.error) || "No se pudo generar el audio.");
+    const ev = traced(path, res, t0, null);
+    throw Object.assign(new ApiError((data && data.code) || "server", (data && data.error) || "No se pudo generar el audio."), { _ai: ev });
   }
-  return res.blob();
+  const blob = await res.blob();
+  traced(path, res, t0, blob);
+  return blob;
 }

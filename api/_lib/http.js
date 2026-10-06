@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { currentTrace, logTrace, traceHeaders, withTrace } from "./trace.js";
 
 export class HttpError extends Error {
   constructor(status, code, message) { super(message); this.status = status; this.code = code; }
@@ -62,7 +63,14 @@ export function checkAccess(req) {
  */
 export function endpoint(fn, opts = {}) {
   const { method = "POST", bucket = "ai", limitEnv = "DAILY_LIMIT_PER_IP", limitDefault = 80, maxBody = MAX_BODY, access = true } = opts;
-  return async function handler(req, res) {
+  return (req, res) => withTrace(() => run(req, res));
+  async function run(req, res) {
+    const route = (req.query && req.query.route) || String(req.url || "").replace(/^.*\/api\//, "").split("?")[0] || "?";
+    const traced = status => {
+      const t = currentTrace();
+      for (const [k, v] of Object.entries(traceHeaders(t))) res.setHeader(k, v);
+      logTrace(route, status, t);
+    };
     try {
       if (req.method !== method) throw new HttpError(405, "method", "Método no permitido.");
       if (access) checkAccess(req);
@@ -70,6 +78,7 @@ export function endpoint(fn, opts = {}) {
       if (limit > 0 && !rateLimit(clientIp(req), limit, Date.now(), bucket)) throw new HttpError(429, "rate_limited", "Llegaste al límite de uso de hoy. Vuelve mañana.");
       const body = method === "POST" ? await readJson(req, maxBody) : Object.fromEntries(new URL(req.url || "/", "http://x").searchParams);
       const out = await fn(body || {}, req);
+      traced(200);
       if (out && out.binary) {
         res.statusCode = 200;
         res.setHeader("Content-Type", out.contentType);
@@ -79,8 +88,9 @@ export function endpoint(fn, opts = {}) {
       }
       send(res, 200, out);
     } catch (e) {
+      traced(e instanceof HttpError ? e.status : 500);
       if (e instanceof HttpError) send(res, e.status, { code: e.code, error: e.message });
       else { console.error(e); send(res, 500, { code: "server", error: "Error interno. Inténtalo otra vez." }); }
     }
-  };
+  }
 }

@@ -3,7 +3,8 @@ import SpeakButton from "../components/SpeakButton.jsx";
 import LiveVoice from "./LiveVoice.jsx";
 import MicButton from "../components/MicButton.jsx";
 import { scenariosFor, todaysScenario } from "../lib/missions.js";
-import { api } from "../lib/api.js";
+import { aiOf, api } from "../lib/api.js";
+import { ModelTag } from "../components/Diag.jsx";
 import { addMistake, completeMission, logSession } from "../lib/game.js";
 
 const GOAL_TURNS = 4;
@@ -37,7 +38,7 @@ export default function Conversar({ s, update, today, ai, toast, server = {}, sc
     try {
       const r = await api("chat-turn", { scenario: sc.id, level: s.profile.level, turns: next.map(t => ({ role: t.role, content: t.content })) }, { signal: ctl.current.signal });
       const me = { ...next[next.length - 1], corr: r.correction || "ok" };
-      setTurns([...next.slice(0, -1), me, { role: "assistant", content: r.reply }]);
+      setTurns([...next.slice(0, -1), me, { role: "assistant", content: r.reply, ai: aiOf(r) }]);
       const n = count + 1;
       setCount(n);
       update(d => {
@@ -76,6 +77,7 @@ export default function Conversar({ s, update, today, ai, toast, server = {}, sc
             <div className="msg ai" key={i}>
               <span className="who">{who(sc)}</span>
               <div className="bub">{t.content}</div>
+              <ModelTag ev={t.ai} />
               <SpeakButton text={t.content} style={{ justifySelf: "start" }} />
             </div>
           ) : (

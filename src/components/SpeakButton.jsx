@@ -26,10 +26,10 @@ export default function SpeakButton({ text, slow = false, label = "Escuchar", ic
   const loading = active && st.status === "loading";
   const ref = useProgressVar(active && !loading);
   const text2 = active ? (loading ? "Cargando…" : "Detener") : label;
-  const engine = active && !loading ? ({ natural: "Voz natural de Gemini", kokoro: "Voz Kokoro (en tu dispositivo)", browser: "Voz del navegador" }[st.engine] || "") : "";
+  const engine = active && !loading ? (({ natural: "Voz natural de Gemini", kokoro: "Voz Kokoro (en tu dispositivo)", browser: "Voz del navegador" }[st.engine] || "") + (st.model ? " · " + st.model : "")) : "";
   return (
     <button ref={ref} type="button" className={"audio-btn " + className + (active ? (loading ? " loading" : " playing") : "")} style={style}
-      aria-label={iconOnly ? text2 : undefined} aria-pressed={active} title={engine || undefined} data-engine={active ? st.engine || "" : ""}
+      aria-label={iconOnly ? text2 : undefined} aria-pressed={active} title={engine || undefined} data-engine={active ? st.engine || "" : ""} data-model={active && st.model ? st.model : undefined}
       onClick={() => toggleAudio(text, { slow, id })}>
       <Icon name={active ? (loading ? "dots" : "stop") : "play"} />{iconOnly ? null : text2}
     </button>

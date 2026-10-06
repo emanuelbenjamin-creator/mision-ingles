@@ -9,7 +9,7 @@ const initials = name => (name || "Estudiante").trim().split(/\s+/).slice(0, 2).
  * Menú de usuario (avatar + nombre). Agrupa ajustes, uso, tema, idioma, ayuda, instalación y cuenta.
  * Cuando existan cuentas de usuario, «Cerrar sesión» se activa con onLogout.
  */
-export default function UserMenu({ s, theme, setTheme, onSettings, onUsage, onHelp, onInstall, canInstall, onBackup, onLogout }) {
+export default function UserMenu({ s, theme, setTheme, onSettings, onUsage, onHelp, onModels, onInstall, canInstall, onBackup, onLogout }) {
   const [open, setOpen] = useState(false);
   const [sub, setSub] = useState(null); // "theme" | "lang" | "about"
   const box = useRef(null);
@@ -45,6 +45,7 @@ export default function UserMenu({ s, theme, setTheme, onSettings, onUsage, onHe
         <div className="um-pop" role="menu" aria-label="Menú de usuario">
           <Item icon="gear" label="Ajustes" kbd="Ctrl+," onClick={run(onSettings)} />
           <Item icon="gauge" label="Mi uso" onClick={run(onUsage)} />
+          {onModels && <Item icon="bolt" label="Modelos (diagnóstico)" hint={s.profile.diag ? "activo" : ""} onClick={run(onModels)} testid="models-item" />}
           <Item icon={theme === "dark" ? "moon" : "sun"} label="Tema" chevron="theme" onClick={() => setSub(sub === "theme" ? null : "theme")} />
           {sub === "theme" && (
             <div className="um-sub" role="group" aria-label="Tema">

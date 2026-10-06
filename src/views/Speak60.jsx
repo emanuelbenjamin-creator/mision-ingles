@@ -5,7 +5,8 @@ import { todaysTopic } from "../lib/missions.js";
 import { localAnalyze } from "../lib/analyze.js";
 import { words } from "../lib/align.js";
 import SpeakButton from "../components/SpeakButton.jsx";
-import { api } from "../lib/api.js";
+import { aiOf, api } from "../lib/api.js";
+import { ModelTag } from "../components/Diag.jsx";
 import { addMistake, bumpSkill, completeMission, logSession } from "../lib/game.js";
 
 const DRAFT = "mi-speak-draft";
@@ -127,6 +128,7 @@ function Feedback({ busy, fb }) {
         <h2>Tu evaluación</h2>
         {a ? <span className="pill ok">Nivel estimado {a.cefr_estimate || "—"}</span> : <span className="pill neutral">Evaluación básica sin IA</span>}
       </div>
+      <ModelTag ev={aiOf(a)} />
       {fb.err && <p className="hint">{fb.err}</p>}
       <div className="scores">
         {[["fluency", "Fluidez"], ["grammar", "Gramática"], ["vocabulary", "Vocabulario"], ["coherence", "Coherencia"]].map(([k, n]) => (

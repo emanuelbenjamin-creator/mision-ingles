@@ -1,6 +1,7 @@
 import { apiBlob } from "./api.js";
 import { hash } from "./dates.js";
 import { kokoroReady, kokoroSpeak } from "./kokoro.js";
+import { recordLocal } from "./trace.js";
 
 /*
  * Reproductor único de la app. Usa la voz natural de Gemini (/api/tts) cuando está activa y hay IA;
@@ -10,7 +11,7 @@ import { kokoroReady, kokoroSpeak } from "./kokoro.js";
  */
 
 let prefs = { mode: "natural", voice: "Kore", accent: "us", rate: 0.9, ai: false, kokoroVoice: "af_heart" };
-let state = { id: null, status: "idle", engine: null };
+let state = { id: null, status: "idle", engine: null, model: null };
 const listeners = new Set();
 const progressListeners = new Set();
 let current = null; // { stop() }
@@ -39,20 +40,24 @@ export function stopAudio() {
   if (state.status !== "idle") setState({ id: null, status: "idle", engine: null });
 }
 
+/** Devuelve { blob, model }: model es el modelo TTS de Gemini que generó el audio (se guarda con la caché). */
 async function naturalBlob(text, voice = prefs.voice) {
   const key = `${voice}|${prefs.accent}|v2|${hash(text)}|${text.length}`;
-  if (mem.has(key)) return mem.get(key);
+  const cachedHit = hit => { recordLocal({ route: "tts", kind: "tts", model: `${hit.model} · ${voice}`, cached: true }); return hit; };
+  if (mem.has(key)) return cachedHit(mem.get(key));
   const url = `/tts-cache/${encodeURIComponent(key)}`;
   try {
     const cache = await caches.open(CACHE);
     const hit = await cache.match(url);
-    if (hit) { const b = await hit.blob(); mem.set(key, b); return b; }
+    if (hit) { const v = { blob: await hit.blob(), model: hit.headers.get("X-AI-Model") || "gemini-tts" }; mem.set(key, v); return cachedHit(v); }
   } catch { /* sin Cache Storage */ }
   const blob = await apiBlob("tts", { text, voice, accent: prefs.accent });
   if (!blob || blob.size < 200 || (blob.type && !/audio|octet/.test(blob.type))) throw new Error("La voz natural devolvió un audio vacío.");
-  mem.set(key, blob);
-  try { const cache = await caches.open(CACHE); await cache.put(url, new Response(blob, { headers: { "Content-Type": "audio/wav" } })); } catch { /* sin Cache Storage */ }
-  return blob;
+  const ev = blob._ai;
+  const v = { blob, model: (ev && ev.calls[0] && ev.calls[0].model) || "gemini-tts" };
+  mem.set(key, v);
+  try { const cache = await caches.open(CACHE); await cache.put(url, new Response(blob, { headers: { "Content-Type": "audio/wav", "X-AI-Model": v.model } })); } catch { /* sin Cache Storage */ }
+  return v;
 }
 
 function browserVoice() {
@@ -65,21 +70,21 @@ function browserVoice() {
 }
 
 /** Reproduce un elemento <audio> con avance continuo. */
-function playElement(a, id, my, engine) {
+function playElement(a, id, my, engine, model = null) {
   let raf = 0;
   const tick = () => {
     if (my !== turn) return;
     if (a.duration > 0) setProgress(a.currentTime / a.duration);
     raf = requestAnimationFrame(tick);
   };
-  const end = () => { cancelAnimationFrame(raf); if (my === turn) { current = null; setProgress(0); setState({ id: null, status: "idle", engine: null }); } };
+  const end = () => { cancelAnimationFrame(raf); if (my === turn) { current = null; setProgress(0); setState({ id: null, status: "idle", engine: null, model: null }); } };
   a.onended = end;
   a.onerror = end;
   current = { stop: () => { cancelAnimationFrame(raf); a.pause(); } };
   return a.play().then(() => {
     if (my !== turn) { a.pause(); return; }
     lastEngine = engine;
-    setState({ id, status: "playing", engine });
+    setState({ id, status: "playing", engine, model });
     raf = requestAnimationFrame(tick);
   });
 }
@@ -92,20 +97,22 @@ function playBrowser(text, slow, id, my) {
   u.rate = slow ? 0.65 : prefs.rate;
   const v = browserVoice();
   if (v) u.voice = v;
+  const model = "navegador · " + (v ? v.name : "voz por defecto");
+  recordLocal({ route: "tts", kind: "tts", model });
   // Avance: por palabras dichas (onboundary) o, si el navegador no lo informa, estimado por tiempo.
   const started = Date.now();
   const estimate = Math.max(1.2, text.split(/\s+/).length / (2.6 * u.rate)) * 1000;
   let spoken = 0, timer = 0;
   u.onboundary = e => { if (typeof e.charIndex === "number") spoken = e.charIndex / Math.max(1, text.length); };
   const tick = () => { if (my !== turn) return; setProgress(Math.max(spoken, Math.min(0.95, (Date.now() - started) / estimate))); timer = setTimeout(tick, 80); };
-  const end = () => { clearTimeout(timer); if (my === turn) { current = null; setProgress(0); setState({ id: null, status: "idle", engine: null }); } };
+  const end = () => { clearTimeout(timer); if (my === turn) { current = null; setProgress(0); setState({ id: null, status: "idle", engine: null, model: null }); } };
   u.onend = end;
   u.onerror = end;
   current = { stop: () => { clearTimeout(timer); synth.cancel(); } };
   synth.cancel();
   synth.speak(u);
   lastEngine = "browser";
-  setState({ id, status: "playing", engine: "browser" });
+  setState({ id, status: "playing", engine: "browser", model });
   tick();
   return true;
 }
@@ -113,21 +120,24 @@ function playBrowser(text, slow, id, my) {
 async function kokoroBlob(text, voice) {
   const v = voice || prefs.kokoroVoice || (prefs.accent === "uk" ? "bf_emma" : "af_heart");
   const key = `k|${v}|${hash(text)}|${text.length}`;
-  if (mem.has(key)) return mem.get(key);
+  const model = `kokoro-82M · ${v}`;
+  if (mem.has(key)) { recordLocal({ route: "tts", kind: "tts", model, cached: true }); return { blob: mem.get(key), model }; }
+  const t0 = Date.now();
   const blob = await kokoroSpeak(text, { voice: v });
+  recordLocal({ route: "tts", kind: "tts", model, ms: Date.now() - t0 });
   mem.set(key, blob);
-  return blob;
+  return { blob, model };
 }
 
 async function playKokoro(text, slow, id, my, voice) {
   setState({ id, status: "loading", engine: "kokoro" });
-  const blob = await kokoroBlob(text, voice);
+  const { blob, model } = await kokoroBlob(text, voice);
   if (my !== turn) return true;
   const url = URL.createObjectURL(blob);
   const a = new Audio(url);
   a.playbackRate = slow ? 0.8 : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
   a.addEventListener("ended", () => URL.revokeObjectURL(url));
-  await playElement(a, id, my, "kokoro");
+  await playElement(a, id, my, "kokoro", model);
   return true;
 }
 
@@ -149,13 +159,13 @@ export async function playAudio(text, { slow = false, id = text, voice, kokoroVo
   if (prefs.mode === "natural" && prefs.ai) {
     setState({ id, status: "loading", engine: "natural" });
     try {
-      const blob = await naturalBlob(text, voice || prefs.voice);
+      const { blob, model } = await naturalBlob(text, voice || prefs.voice);
       if (my !== turn) return;
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
       a.playbackRate = slow ? 0.75 : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
       a.addEventListener("ended", () => URL.revokeObjectURL(url));
-      await playElement(a, id, my, "natural");
+      await playElement(a, id, my, "natural", model);
       lastFallback = null;
       return;
     } catch (e) {

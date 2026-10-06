@@ -1,3 +1,5 @@
+import { aiOf } from "../lib/api.js";
+import { ModelTag } from "../components/Diag.jsx";
 import { useRef, useState } from "react";
 import SpeakButton from "../components/SpeakButton.jsx";
 import RecordRow from "../components/RecordRow.jsx";
@@ -72,6 +74,7 @@ export default function Pronunciacion({ s, ai, update, today, toast, soundId, se
                       {at.ai.tip_es && <div style={{ marginTop: 4 }}>{at.ai.tip_es}</div>}
                       {at.ai.scores && <div className="small" style={{ marginTop: 4 }}>Precisión {at.ai.scores.accuracy} · Fluidez {at.ai.scores.fluency} · Completitud {at.ai.scores.completeness}</div>}
                       {at.ai.transcript && <div className="small muted" style={{ marginTop: 4 }}>Se escuchó: «{at.ai.transcript}»</div>}
+                      <ModelTag ev={aiOf(at.ai)} />
                       {at.ai.method && <div className="small muted">Evaluado con {{ azure: "Azure (fonemas)", gemini: "Gemini (escucha el audio)", whisper: "Whisper (transcripción)" }[at.ai.method] || at.ai.method}</div>}
                     </div>
                   )}

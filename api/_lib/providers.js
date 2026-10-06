@@ -6,6 +6,8 @@
  * esa clave se descartan con el listado /models.
  */
 
+import { note, outcomeOf } from "./trace.js";
+
 const list = (name, def) => (process.env[name] || def).split(",").map(s => s.trim()).filter(Boolean);
 
 export const PROVIDERS = {
@@ -98,8 +100,15 @@ export async function groqTranscribe({ audio, mimeType = "audio/wav", language =
   if (prompt) form.append("prompt", prompt.slice(0, 400));
   form.append("response_format", "json");
   form.append("temperature", "0");
-  const res = await fetchImpl("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form });
-  if (!res.ok) throw Object.assign(new Error(`groq whisper ${res.status}`), { status: res.status });
-  const d = await res.json();
-  return String((d && d.text) || "").trim();
+  const model = "groq:" + (process.env.GROQ_STT_MODEL || "whisper-large-v3-turbo"), t0 = Date.now();
+  try {
+    const res = await fetchImpl("https://api.groq.com/openai/v1/audio/transcriptions", { method: "POST", headers: { Authorization: `Bearer ${key}` }, body: form });
+    if (!res.ok) throw Object.assign(new Error(`groq whisper ${res.status}`), { status: res.status });
+    const d = await res.json();
+    note({ kind: "stt", model, ms: Date.now() - t0 });
+    return String((d && d.text) || "").trim();
+  } catch (e) {
+    note({ kind: "stt", model: null, ms: Date.now() - t0, tried: [{ m: model, r: outcomeOf(e), ms: Date.now() - t0 }] });
+    throw e;
+  }
 }

@@ -1,6 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { HttpError } from "./http.js";
 import { enabledProviders, externalChat, externalModels, isExternal } from "./providers.js";
+import { note, outcomeOf } from "./trace.js";
 
 /*
  * Solo modelos con capa gratuita de la Gemini API. Se lanzan todos a la vez y gana la primera
@@ -71,10 +72,15 @@ function noteFailure(model, e, now = Date.now()) {
 /**
  * Lanza run(model, signal) para todos los modelos a la vez. Resuelve con el primer resultado que
  * pase validate; cancela el resto. Rechaza con la lista de errores si todos fallan.
+ * Resuelve { model, value, ms, tried }; tried = [{ m, r, ms }] con el resultado de cada modelo
+ * (ok, lost: otro ganó antes, 429, 404, timeout, invalid, error). Al rechazar, errors.tried.
  */
 export function race(models, run, validate = x => x, timeoutMs = TIMEOUT_MS) {
-  if (!models.length) return Promise.reject([["(ninguno)", new Error("sin modelos disponibles")]]);
+  if (!models.length) return Promise.reject(Object.assign([["(ninguno)", new Error("sin modelos disponibles")]], { tried: [] }));
   const ctrls = models.map(() => new AbortController());
+  const t0 = Date.now();
+  const res = models.map(m => ({ m, r: null, ms: 0 }));
+  const close = r => res.forEach(x => { if (!x.r) { x.r = r; x.ms = Date.now() - t0; } });
   return new Promise((resolve, reject) => {
     let pending = models.length, done = false;
     const errors = [];
@@ -82,24 +88,29 @@ export function race(models, run, validate = x => x, timeoutMs = TIMEOUT_MS) {
       if (done) return;
       done = true;
       ctrls.forEach(c => c.abort());
-      reject([...errors, ["timeout", new Error("tiempo agotado")]]);
+      close("timeout");
+      reject(Object.assign([...errors, ["timeout", new Error("tiempo agotado")]], { tried: res }));
     }, timeoutMs);
     models.forEach((m, i) => {
       Promise.resolve()
         .then(() => run(m, ctrls[i].signal))
         .then(raw => {
           if (done) return;
-          const value = validate(raw);
+          let value;
+          try { value = validate(raw); } catch (e) { throw Object.assign(e instanceof Error ? e : new Error(String(e)), { invalid: true }); }
           done = true;
           clearTimeout(timer);
           ctrls.forEach((c, j) => { if (j !== i) c.abort(); });
-          resolve({ model: m, value });
+          res[i].r = "ok"; res[i].ms = Date.now() - t0;
+          close("lost");
+          resolve({ model: m, value, ms: res[i].ms, tried: res });
         })
         .catch(e => {
           if (done) return;
           errors.push([m, e]);
           noteFailure(m, e);
-          if (--pending === 0) { done = true; clearTimeout(timer); reject(errors); }
+          res[i].r = e && e.invalid ? "invalid" : outcomeOf(e); res[i].ms = Date.now() - t0;
+          if (--pending === 0) { done = true; clearTimeout(timer); reject(Object.assign(errors, { tried: res })); }
         });
     });
   });
@@ -134,7 +145,12 @@ function aiDown(errors) {
  * Devuelve lo que devuelva validate (por defecto, el texto).
  */
 export async function generate({ system, contents, json = true, temperature = 0.5, validate = x => x, hasAudio = false }) {
-  if (testGenerator) return validate(await testGenerator({ system, contents, json, hasAudio }));
+  if (testGenerator) {
+    const t0 = Date.now();
+    const v = validate(await testGenerator({ system, contents, json, hasAudio }));
+    note({ kind: "text", model: "test", ms: Date.now() - t0 });
+    return v;
+  }
   if (!hasAI()) throw new HttpError(503, "no_ai", "El servidor no tiene configurada ninguna clave de IA (GEMINI_API_KEY, GROQ_API_KEY o CEREBRAS_API_KEY).");
   const c = hasGemini() ? getClient() : null;
   const cool = list => list.filter(m => !((cooling.get(m) || 0) > Date.now()));
@@ -158,20 +174,31 @@ export async function generate({ system, contents, json = true, temperature = 0.
   };
   // Carrera principal: Gemini + Groq + Cerebras a la vez (los externos no escuchan audio).
   const primary = [...(c ? await availableModels(TEXT_MODELS(), c) : []), ...(hasAudio ? [] : cool(await externalModels("primary")))];
+  const kind = hasAudio ? "audio-eval" : "text";
+  const t0 = Date.now();
+  const triedOf = e => (e && e.tried) || [];
   try {
-    return (await race(primary, run, validate)).value;
+    const r = await race(primary, run, validate);
+    note({ kind, model: r.model, ms: r.ms, tier: "principal", tried: r.tried });
+    return r.value;
   } catch (errors) {
-    if (hasAudio) throw aiDown(errors);
+    if (hasAudio) { note({ kind, model: null, ms: Date.now() - t0, tried: triedOf(errors) }); throw aiDown(errors); }
     // Respaldo: Gemma + Mistral + OpenRouter.
     const fb = [...(c ? await availableModels(FALLBACK_MODELS(), c) : []), ...cool(await externalModels("fallback"))];
-    try { return (await race(fb, run, validate)).value; }
-    catch (more) { throw aiDown([...(Array.isArray(errors) ? errors : []), ...(Array.isArray(more) ? more : [])]); }
+    try {
+      const r = await race(fb, run, validate);
+      note({ kind, model: r.model, ms: Date.now() - t0, tier: "respaldo", tried: [...triedOf(errors), ...r.tried] });
+      return r.value;
+    } catch (more) {
+      note({ kind, model: null, ms: Date.now() - t0, tried: [...triedOf(errors), ...triedOf(more)] });
+      throw aiDown([...(Array.isArray(errors) ? errors : []), ...(Array.isArray(more) ? more : [])]);
+    }
   }
 }
 
 /** Texto → audio PCM con los modelos TTS gratuitos en carrera. Devuelve { data: base64, rate }. */
 export async function synthesize({ text, voice = "Kore", style = "" }) {
-  if (testGenerator) return testGenerator({ tts: true, text, voice, style });
+  if (testGenerator) { note({ kind: "tts", model: "test" }); return testGenerator({ tts: true, text, voice, style }); }
   const c = getClient();
   const run = (model, signal) => c.models.generateContent({
     model,
@@ -184,8 +211,15 @@ export async function synthesize({ text, voice = "Kore", style = "" }) {
     const rate = Number((String(p.inlineData.mimeType).match(/rate=(\d+)/) || [])[1]) || 24000;
     return { data: p.inlineData.data, rate };
   });
-  try { return (await race(await availableModels(TTS_MODELS(), c), run)).value; }
-  catch (errors) { throw aiDown(errors); }
+  const t0 = Date.now();
+  try {
+    const r = await race(await availableModels(TTS_MODELS(), c), run);
+    note({ kind: "tts", model: r.model, ms: r.ms, tried: r.tried });
+    return r.value;
+  } catch (errors) {
+    note({ kind: "tts", model: null, ms: Date.now() - t0, tried: (errors && errors.tried) || [] });
+    throw aiDown(errors);
+  }
 }
 
 /** Token temporal para Gemini Live: el navegador conecta sin conocer la clave. */
@@ -203,6 +237,7 @@ export async function createLiveToken({ minutes, config }) {
       httpOptions: { apiVersion: "v1alpha" },
     },
   });
+  note({ kind: "live", model: token && token.name ? model : null, ms: Date.now() - now });
   if (!token || !token.name) throw new HttpError(502, "ai_error", "No se pudo iniciar la voz en vivo. Inténtalo otra vez.");
   return { token: token.name, model };
 }

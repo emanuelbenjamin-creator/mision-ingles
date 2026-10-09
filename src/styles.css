@@ -441,3 +441,18 @@ body.diag-on.diag-min { padding-bottom: 56px; }
 .who-card { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: var(--surface); margin-bottom: 8px; }
 .who-avatar { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 1.1rem; color: #fff; background: linear-gradient(135deg, var(--grad-ring-a), var(--accent-2)); }
 .who-card .btn { margin-left: auto; flex: none; }
+
+/* ---------- v3: diálogos a dos voces ---------- */
+.cast { display: flex; flex-wrap: wrap; gap: 14px; }
+.cast-item { display: flex; align-items: center; gap: 8px; }
+.cast-item .who-avatar { width: 32px; height: 32px; font-size: .9rem; }
+.cast-item.s1 .who-avatar { background: linear-gradient(135deg, var(--accent-2), var(--good)); }
+.dialogue { display: grid; gap: 10px; }
+.dl { display: grid; grid-template-columns: minmax(0, auto) auto; gap: 2px 8px; max-width: 88%; align-items: center; }
+.dl .who { grid-column: 1 / -1; font-size: .75rem; color: var(--muted); }
+.dl .bub { padding: 10px 14px; border-radius: 16px; background: var(--surface-2); border-bottom-left-radius: 4px; overflow-wrap: anywhere; line-height: 1.6; }
+.dl.s1 { justify-self: end; }
+.dl.s1 .who { text-align: right; }
+.dl.s1 .bub { background: var(--accent-soft); border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
+.dl.on .bub { box-shadow: 0 0 0 2px var(--accent); }
+.hidden-script .bub { color: var(--muted); letter-spacing: 1px; user-select: none; }

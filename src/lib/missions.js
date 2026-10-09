@@ -37,5 +37,6 @@ export function missionList(s, today) {
     { id: "chat", icon: "chat", title: "Bonus · Conversación", sub: sc.name + " · 4 intercambios o 1 min de voz", go: { tab: "conversar", scen: sc.id }, bonus: true },
     { id: "dictation", icon: "headphones", title: "Bonus · Dictado", sub: "Escucha 5 frases y escríbelas", go: { tab: "leer", leerMode: "dictado" }, bonus: true },
     { id: "reading", icon: "book", title: "Bonus · Lectura", sub: "Una historia corta de tu nivel + 3 preguntas", go: { tab: "leer", leerMode: "lectura" }, bonus: true },
+    { id: "dialogue", icon: "headphones", title: "Bonus · Diálogo", sub: "Dos voces conversan + 3 preguntas", go: { tab: "leer", leerMode: "dialogo" }, bonus: true },
   ];
 }

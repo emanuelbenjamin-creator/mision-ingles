@@ -286,6 +286,52 @@ export function toggleSequence(lines, opts = {}) {
   return playSequence(lines, opts);
 }
 
+/* ---------- Diálogos a dos voces ---------- */
+/** Líneas de un diálogo con la voz de cada personaje: cast = [personaje0, personaje1]. */
+export const dialogueLines = (d, cast) => d.lines.map(([s, text]) => {
+  const c = cast[s] || {};
+  return { text, voice: c.voice, kokoroVoice: c.kokoroVoice, accent: c.accent, tone: c.tone, g: c.g };
+});
+
+async function dialogueBlob(d, cast) {
+  const text = d.lines.map(([s, t]) => s + t).join("|");
+  const key = `dlg|${cast.map(c => c.voice).join("+")}|${hash(text)}|${text.length}`;
+  if (mem.has(key)) return mem.get(key);
+  const blob = await apiBlob("tts", { speakers: cast.map(c => ({ name: c.name, voice: c.voice })), lines: d.lines.map(([s, t]) => ({ s, text: t })) });
+  if (!blob || blob.size < 200) throw new Error("La voz natural devolvió un audio vacío.");
+  const ev = blob._ai;
+  const v = { blob, model: (ev && ev.calls[0] && ev.calls[0].model) || "gemini-tts" };
+  mem.set(key, v);
+  return v;
+}
+
+/**
+ * Reproduce (o detiene) un diálogo. Con la voz de Gemini se pide un solo audio a dos voces, que suena
+ * como una conversación real; si falla o se usa Kokoro o el navegador, se lee línea por línea.
+ */
+export async function toggleDialogue(d, cast, { id = "dlg" } = {}) {
+  if ((state.id === id && state.status !== "idle") || seq.id === id) { stopAudio(); return; }
+  if (prefs.mode === "natural" && prefs.ai) {
+    stopAudio();
+    const my = turn;
+    setState({ id, status: "loading", engine: "natural" });
+    try {
+      const { blob, model } = await dialogueBlob(d, cast);
+      if (my !== turn) return;
+      const url = URL.createObjectURL(blob);
+      const a = new Audio(url);
+      a.playbackRate = Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
+      a.addEventListener("ended", () => URL.revokeObjectURL(url));
+      await playElement(a, id, my, "natural", model);
+      return;
+    } catch (e) {
+      if (my !== turn) return;
+      reportFallback((e && e.message) || "La voz natural no respondió.");
+    }
+  }
+  await playSequence(dialogueLines(d, cast), { id });
+}
+
 /**
  * Audio (Blob WAV) de un texto con la voz activa, sin reproducirlo: para dibujar su onda y su
  * entonación. Devuelve { blob, engine } o null si solo hay voz del navegador (no se puede capturar).

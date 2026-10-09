@@ -6,7 +6,7 @@ import { learnedCount } from "./srs.js";
  * devuelven mensajes para mostrar como avisos.
  */
 
-export const MISSION_XP = { speak: 20, pron: 15, grammar: 15, review: 10, chat: 20, dictation: 15, reading: 15, ielts: 40 };
+export const MISSION_XP = { speak: 20, pron: 15, grammar: 15, review: 10, chat: 20, dictation: 15, reading: 15, dialogue: 15, ielts: 40 };
 export const CORE_MISSIONS = ["speak", "pron", "grammar", "review"];
 
 export function streak(s, today) {

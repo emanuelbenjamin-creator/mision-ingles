@@ -1,7 +1,7 @@
 import { LEVELS, GOALS } from "../../src/content/meta.js";
 import { SCENARIOS } from "../../src/content/scenarios.js";
 import { PROFESSIONS } from "../../src/content/professions.js";
-import { ACCENT_IDS, TONE_IDS, liveVoiceLine } from "../../src/content/voices.js";
+import { ACCENT_IDS, TONE_IDS, accentOf, liveVoiceLine } from "../../src/content/voices.js";
 import { HttpError } from "./http.js";
 
 /* Validación de entradas y normalización de salidas: nunca se confía en lo que manda el navegador ni en el formato del modelo. */
@@ -205,6 +205,29 @@ export function normalizeReading(o) {
     glossary: arr(o && o.glossary, 12).map(g => [str(g && g.word, 60), str(g && g.es, 120)]).filter(g => g[0] && g[1]),
     questions,
   };
+}
+
+/** a y b son personajes ({ name, accent }) de src/content/characters.js. */
+export function dialoguePrompt(lv, prof, a, b, seed) {
+  const from = c => accentOf(c.accent).from;
+  return `Write an original short spoken conversation for an English listening exercise, for a learner at CEFR ${lv} (native Spanish speaker). The situation is related to ${prof.en}. Speaker 0 is ${a.name} (from ${from(a)}) and speaker 1 is ${b.name} (from ${from(b)}). Variation seed: ${seed}.
+Write 8 to 10 turns, strictly alternating and starting with speaker 0. Each turn is 1-2 natural spoken sentences, at most 22 words, with vocabulary and grammar appropriate for ${lv}. The conversation must have a clear situation, a small problem and a resolution. Do not write the speaker's name inside the text.
+Reply with ONLY a JSON object:
+{"title":"short title","setting_es":"una frase en español que explica la situación","lines":[{"s":0,"text":"..."},{"s":1,"text":"..."}],"questions":[{"q":"comprehension question","o":["option A","option B","option C"],"a":0}]}
+Write exactly 3 questions with 3 options each; "a" is the index of the correct option, and vary its position.`;
+}
+
+export function normalizeDialogue(o) {
+  let lines = arr(o && o.lines, 14).map(l => ({ s: Number(l && l.s) === 1 ? 1 : 0, text: str(l && l.text, 240) })).filter(l => l.text);
+  // El TTS a dos voces admite un guion corto: se recorta por el final si se pasa.
+  while (lines.length > 4 && lines.reduce((n, l) => n + l.text.length + 12, 0) > 1100) lines = lines.slice(0, -1);
+  const questions = arr(o && o.questions, 3).map(q => {
+    const opts = arr(q && q.o, 4).map(x => str(x, 160)).filter(Boolean);
+    const a = Math.round(Number(q && q.a));
+    return { q: str(q && q.q, 200), o: opts, a: Number.isInteger(a) && a >= 0 && a < opts.length ? a : 0 };
+  }).filter(q => q.q && q.o.length >= 2);
+  if (lines.length < 4 || !lines.some(l => l.s === 0) || !lines.some(l => l.s === 1) || questions.length < 2) throw new HttpError(502, "invalid_json", "El diálogo llegó incompleto. Inténtalo otra vez.");
+  return { title: str(o && o.title, 120) || "Dialogue", setting_es: str(o && o.setting_es, 240), lines: lines.map(l => [l.s, l.text]), questions };
 }
 
 export function wordPrompt(word, sentence) {

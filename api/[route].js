@@ -3,6 +3,7 @@ import chatReview from "./_routes/chat-review.js";
 import chatSuggest from "./_routes/chat-suggest.js";
 import chatTurn from "./_routes/chat-turn.js";
 import cronRemind from "./_routes/cron-remind.js";
+import dialogue from "./_routes/dialogue.js";
 import dictation from "./_routes/dictation.js";
 import grammarAsk from "./_routes/grammar-ask.js";
 import grammarExplain from "./_routes/grammar-explain.js";
@@ -29,6 +30,7 @@ export const ROUTES = {
   "chat-suggest": chatSuggest,
   "chat-turn": chatTurn,
   "cron-remind": cronRemind,
+  dialogue,
   "dictation": dictation,
   "grammar-ask": grammarAsk,
   "grammar-explain": grammarExplain,

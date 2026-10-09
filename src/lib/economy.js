@@ -54,7 +54,7 @@ export async function startEconomy({ opts, level, profession, onTranscript, onSt
       onTranscript("model", r.reply, aiOf(r));
       onState("speaking");
       speaking = true;
-      await speakAndWait(r.reply);
+      await speakAndWait(r.reply, { voice: opts.voice, accent: opts.accent, tone: opts.tone, kokoroFallback: opts.kokoroVoice });
       speaking = false;
       if (!closed) listen();
     } catch (e) {

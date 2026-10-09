@@ -3,7 +3,9 @@ import LiveVoice from "./LiveVoice.jsx";
 import VoicePicker from "../components/VoicePicker.jsx";
 import { scenariosFor } from "../lib/missions.js";
 import { weekStart } from "../lib/report.js";
-import { voiceLabel } from "../content/voices.js";
+import { accentLabel, toneOf, voiceLabel } from "../content/voices.js";
+import { characterFor } from "../content/characters.js";
+import { playAudio } from "../lib/audio.js";
 
 const MODES = [
   { id: "free", name: "Conversación libre", desc: "Habla de lo que quieras con un compañero nativo." },
@@ -24,13 +26,19 @@ export default function EnVivo(props) {
   const [correction, setCorrection] = useState("end");
   const [pace, setPace] = useState("normal");
   const [locked, setLocked] = useState(false);
-  const voice = s.profile.liveVoice || s.profile.voice || "Kore";
+  const custom = s.profile.liveVoiceMode === "custom";
   const engine = s.profile.liveEngine || (server.gemini === false ? "economy" : "live");
   const setEngine = v => update(d => { d.profile.liveEngine = v; });
 
   const scenario = mode === "roleplay" ? scen : mode;
   const title = mode === "roleplay" ? (scenarios.find(x => x.id === scen) || {}).name : MODES.find(m => m.id === mode).name;
-  const opts = { scenario, topic: mode === "free" || mode === "tutor" ? topic : "", correction: mode === "tutor" ? "now" : correction, pace, voice };
+  // Cada escenario tiene su personaje, con voz, acento y tono propios; el alumno puede elegir otra voz.
+  const who = characterFor(scenario);
+  const voice = custom ? s.profile.liveVoice || s.profile.voice || "Kore" : who.voice;
+  const accent = custom ? s.profile.accent || "us" : who.accent;
+  const tone = custom ? s.profile.tone || "friendly" : who.tone;
+  const opts = { scenario, topic: mode === "free" || mode === "tutor" ? topic : "", correction: mode === "tutor" ? "now" : correction, pace, voice, accent, tone, kokoroVoice: custom ? undefined : who.kokoroVoice };
+  const hello = `Hi, I'm ${who.name}. Ready when you are!`;
 
   const hist = s.liveSessions || [];
   const ws = weekStart(props.today);
@@ -46,7 +54,7 @@ export default function EnVivo(props) {
           <p className="muted">Una llamada real con tu coach de inglés: hablas, te responde con voz natural y puedes interrumpirlo. Al colgar recibes tu revisión con errores y puntajes.</p>
         </div>
         <div className="card">
-          <LiveVoice key={scenario + voice + pace + correction + engine} {...props} opts={opts} title={title} onLiveChange={setLocked} engine={engine} onEngineChange={setEngine} />
+          <LiveVoice key={scenario + voice + accent + tone + pace + correction + engine} {...props} opts={opts} title={title} onLiveChange={setLocked} engine={engine} onEngineChange={setEngine} />
         </div>
         <div className="card">
           <div className="card-head"><h2>Tus llamadas</h2><span className="small muted">hoy {mm(todaySecs)} · semana {mm(weekSecs)}</span></div>
@@ -108,9 +116,24 @@ export default function EnVivo(props) {
             </div>
           )}
           <div className="field">
-            <label>Voz del coach: <b>{voiceLabel(voice)}</b></label>
-            <VoicePicker value={voice} canPreview={ai} onChange={v => update(d => { d.profile.liveVoice = v; })} />
-            <p className="small muted">Pulsa ▶ para escuchar cada voz. Es la misma voz que oirás en la llamada.</p>
+            <label>Con quién hablas</label>
+            <div className="who-card" data-testid="character">
+              <div className="who-avatar" aria-hidden="true">{who.name.replace(/^(Dr|Mr|Mrs|Ms)\.\s*/, "")[0]}</div>
+              <div style={{ minWidth: 0 }}>
+                <b>{who.name}</b>
+                <div className="small muted">{who.bio_es}</div>
+                <div className="small"><span className="pill neutral">{accentLabel(accent)}</span> <span className="pill neutral">{toneOf(tone).es}</span> <span className="pill neutral">{voiceLabel(voice)}</span></div>
+              </div>
+              <button type="button" className="btn ghost sm" onClick={() => playAudio(hello, { id: "who:" + who.id + voice, voice, accent, tone, kokoroFallback: who.kokoroVoice })}>Escuchar</button>
+            </div>
+            <div className="seg" role="group" aria-label="Voz de la llamada">
+              <button type="button" aria-pressed={!custom} onClick={() => update(d => { d.profile.liveVoiceMode = "character"; })}>Voz del personaje</button>
+              <button type="button" aria-pressed={custom} onClick={() => update(d => { d.profile.liveVoiceMode = "custom"; })}>Elegir otra</button>
+            </div>
+            {custom && <>
+              <VoicePicker value={voice} canPreview={ai} onChange={v => update(d => { d.profile.liveVoice = v; })} />
+              <p className="small muted">Pulsa ▶ para escuchar cada voz. Usa el acento y el tono de tus Ajustes.</p>
+            </>}
           </div>
         </fieldset>
       </div>

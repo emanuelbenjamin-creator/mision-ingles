@@ -13,7 +13,7 @@ const clean = t => String(t).replace(/[*_#`>]+/g, "").replace(/\p{Extended_Picto
 export default endpoint(async body => {
   const sc = SPECIAL[body.scenario] || scenarioById(body.scenario);
   const prof = body.profession && body.profession !== "general" ? profession(body.profession).en : "";
-  const system = liveSystem(sc, level(body.level), { topic: body.topic, correction: body.correction, pace: body.pace, profession: prof })
+  const system = liveSystem(sc, level(body.level), { topic: body.topic, correction: body.correction, pace: body.pace, profession: prof, accent: body.accent, tone: body.tone })
     + "\nThis is a spoken conversation: reply with plain text to be read aloud (no markdown, no emojis, no stage directions), at most 3 short sentences.";
   const turns = (Array.isArray(body.turns) ? body.turns : []).slice(-20)
     .map(t => ({ role: t && t.role === "model" ? "model" : "user", text: str(t && t.text, 800) })).filter(t => t.text);

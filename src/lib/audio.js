@@ -2,6 +2,7 @@ import { apiBlob } from "./api.js";
 import { hash } from "./dates.js";
 import { kokoroReady, kokoroSpeak } from "./kokoro.js";
 import { recordLocal } from "./trace.js";
+import { accentOf } from "../content/voices.js";
 
 /*
  * Reproductor único de la app. Usa la voz natural de Gemini (/api/tts) cuando está activa y hay IA;
@@ -10,7 +11,7 @@ import { recordLocal } from "./trace.js";
  * - Avance (0–1) por un canal aparte, para pintar la barra sin re-renderizar toda la app.
  */
 
-let prefs = { mode: "natural", voice: "Kore", accent: "us", rate: 0.9, ai: false, kokoroVoice: "af_heart" };
+let prefs = { mode: "natural", voice: "Kore", accent: "us", tone: "friendly", rate: 0.9, ai: false, kokoroVoice: "af_heart" };
 let state = { id: null, status: "idle", engine: null, model: null };
 const listeners = new Set();
 const progressListeners = new Set();
@@ -32,7 +33,13 @@ export function subscribeProgress(fn) { progressListeners.add(fn); return () => 
 function setState(next) { state = next; listeners.forEach(f => f(state)); }
 function setProgress(p) { const v = Math.max(0, Math.min(1, p || 0)); progressListeners.forEach(f => f(v)); }
 
+/** Detiene lo que suena (y la secuencia en curso, si la hay). */
 export function stopAudio() {
+  if (seq.id) { seqToken++; setSeq({ id: null, index: -1, total: 0 }); }
+  halt();
+}
+
+function halt() {
   turn++;
   if (current) { try { current.stop(); } catch { /* ya detenido */ } current = null; }
   try { if (window.speechSynthesis && window.speechSynthesis.speaking) window.speechSynthesis.cancel(); } catch { /* sin voz */ }
@@ -41,8 +48,8 @@ export function stopAudio() {
 }
 
 /** Devuelve { blob, model }: model es el modelo TTS de Gemini que generó el audio (se guarda con la caché). */
-async function naturalBlob(text, voice = prefs.voice) {
-  const key = `${voice}|${prefs.accent}|v2|${hash(text)}|${text.length}`;
+async function naturalBlob(text, voice = prefs.voice, accent = prefs.accent, tone = prefs.tone) {
+  const key = `${voice}|${accent}|${tone}|v3|${hash(text)}|${text.length}`;
   const cachedHit = hit => { recordLocal({ route: "tts", kind: "tts", model: `${hit.model} · ${voice}`, cached: true }); return hit; };
   if (mem.has(key)) return cachedHit(mem.get(key));
   const url = `/tts-cache/${encodeURIComponent(key)}`;
@@ -51,7 +58,7 @@ async function naturalBlob(text, voice = prefs.voice) {
     const hit = await cache.match(url);
     if (hit) { const v = { blob: await hit.blob(), model: hit.headers.get("X-AI-Model") || "gemini-tts" }; mem.set(key, v); return cachedHit(v); }
   } catch { /* sin Cache Storage */ }
-  const blob = await apiBlob("tts", { text, voice, accent: prefs.accent });
+  const blob = await apiBlob("tts", { text, voice, accent, tone });
   if (!blob || blob.size < 200 || (blob.type && !/audio|octet/.test(blob.type))) throw new Error("La voz natural devolvió un audio vacío.");
   const ev = blob._ai;
   const v = { blob, model: (ev && ev.calls[0] && ev.calls[0].model) || "gemini-tts" };
@@ -60,10 +67,10 @@ async function naturalBlob(text, voice = prefs.voice) {
   return v;
 }
 
-function browserVoice() {
+function browserVoice(accent = prefs.accent) {
   try {
     const vs = window.speechSynthesis.getVoices();
-    const lang = prefs.accent === "uk" ? /^en[-_]GB/i : /^en[-_]US/i;
+    const lang = new RegExp("^" + accentOf(accent).lang.replace("-", "[-_]"), "i");
     return vs.find(v => lang.test(v.lang) && /natural|neural|online|google|samantha|aria|jenny|guy|daniel|serena|libby|ryan/i.test(v.name))
       || vs.find(v => lang.test(v.lang)) || vs.find(v => /^en/i.test(v.lang));
   } catch { return null; }
@@ -89,13 +96,14 @@ function playElement(a, id, my, engine, model = null) {
   });
 }
 
-function playBrowser(text, slow, id, my) {
+function playBrowser(text, slow, id, my, accent = prefs.accent, pitch = 1) {
   const synth = window.speechSynthesis;
   if (!synth) { setState({ id: null, status: "idle", engine: null }); return false; }
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = prefs.accent === "uk" ? "en-GB" : "en-US";
+  u.lang = accentOf(accent).lang;
   u.rate = slow ? 0.65 : prefs.rate;
-  const v = browserVoice();
+  u.pitch = pitch;
+  const v = browserVoice(accent);
   if (v) u.voice = v;
   const model = "navegador · " + (v ? v.name : "voz por defecto");
   recordLocal({ route: "tts", kind: "tts", model });
@@ -147,8 +155,14 @@ function reportFallback(reason) {
   if (changed && onFallback) onFallback(reason);
 }
 
-export async function playAudio(text, { slow = false, id = text, voice, kokoroVoice } = {}) {
-  stopAudio();
+/** Reproduce un texto. opts: { slow, id, voice, kokoroVoice, accent, tone } (los cuatro últimos, para personajes). */
+export function playAudio(text, opts = {}) {
+  if (seq.id) { seqToken++; setSeq({ id: null, index: -1, total: 0 }); }
+  return start(text, opts);
+}
+
+async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoroFallback, accent, tone, pitch } = {}) {
+  halt();
   const my = turn;
   if (prefs.mode === "kokoro" || kokoroVoice) {
     if (kokoroReady()) {
@@ -159,7 +173,7 @@ export async function playAudio(text, { slow = false, id = text, voice, kokoroVo
   if (prefs.mode === "natural" && prefs.ai) {
     setState({ id, status: "loading", engine: "natural" });
     try {
-      const { blob, model } = await naturalBlob(text, voice || prefs.voice);
+      const { blob, model } = await naturalBlob(text, voice || prefs.voice, accent || prefs.accent, tone || prefs.tone);
       if (my !== turn) return;
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
@@ -173,12 +187,12 @@ export async function playAudio(text, { slow = false, id = text, voice, kokoroVo
       reportFallback((e && e.message) || "La voz natural no respondió.");
       // Respaldo de calidad: Kokoro, si ya está descargada en este dispositivo.
       if (kokoroReady()) {
-        try { if (await playKokoro(text, slow, id, my)) return; } catch { /* sigue con la del navegador */ }
+        try { if (await playKokoro(text, slow, id, my, kokoroFallback)) return; } catch { /* sigue con la del navegador */ }
         if (my !== turn) return;
       }
     }
   }
-  playBrowser(text, slow, id, my);
+  playBrowser(text, slow, id, my, accent || prefs.accent, pitch);
 }
 
 /** Si ese mismo audio está sonando o cargando, lo detiene; si no, lo reproduce. */
@@ -212,14 +226,79 @@ export async function toggleClip(url, id) {
   catch { if (my === turn) { current = null; setState({ id: null, status: "idle", engine: null }); } }
 }
 
-/** Reproduce y resuelve cuando termina (para el modo de voz económico). */
-export function speakAndWait(text) {
+/** Resuelve cuando el audio con ese id empezó y terminó (o tras un tiempo de seguridad). */
+function waitEnd(id, text) {
   return new Promise(resolve => {
-    const id = "eco:" + Date.now() + Math.random();
     let started = false, done = false;
     const finish = () => { if (done) return; done = true; un(); clearTimeout(safety); resolve(); };
     const un = subscribeAudio(st => { if (st.id === id) started = true; else if (started) finish(); });
-    const safety = setTimeout(finish, 4000 + text.split(/\s+/).length * 700);
-    playAudio(text, { id });
+    const safety = setTimeout(finish, 6000 + text.split(/\s+/).length * 700);
   });
+}
+
+/** Reproduce y resuelve cuando termina (para el modo de voz económico y manos libres). */
+export function speakAndWait(text, opts = {}) {
+  const id = "eco:" + Date.now() + Math.random();
+  const done = waitEnd(id, text);
+  playAudio(text, { ...opts, id });
+  return done;
+}
+
+/* ---------- Secuencias: varias líneas seguidas, cada una con su voz (diálogos e historias) ---------- */
+let seq = { id: null, index: -1, total: 0 };
+let seqToken = 0;
+const seqListeners = new Set();
+export const getSeqState = () => seq;
+export function subscribeSeq(fn) { seqListeners.add(fn); return () => seqListeners.delete(fn); }
+function setSeq(next) { seq = next; seqListeners.forEach(f => f(seq)); }
+
+/** Descarga por adelantado la voz natural de una línea, para que no haya silencio entre turnos. */
+function prefetch(line) {
+  if (!line || prefs.mode !== "natural" || !prefs.ai) return;
+  naturalBlob(line.text, line.voice || prefs.voice, line.accent || prefs.accent, line.tone || prefs.tone).catch(() => { /* se reintenta al reproducir */ });
+}
+
+/**
+ * Reproduce lines = [{ text, voice?, kokoroVoice?, accent?, tone?, g? }] en orden. Resuelve true si llegó
+ * al final y false si se detuvo. El estado { id, index, total } se publica con subscribeSeq.
+ */
+export async function playSequence(lines, { id = "seq", from = 0, slow = false } = {}) {
+  stopAudio();
+  const my = ++seqToken;
+  for (let i = from; i < lines.length; i++) {
+    if (my !== seqToken) return false;
+    setSeq({ id, index: i, total: lines.length });
+    prefetch(lines[i + 1]);
+    const line = lines[i], lineId = `${id}#${i}`;
+    const done = waitEnd(lineId, line.text);
+    // En modo Kokoro cada personaje usa su voz Kokoro; en modo natural, su voz de Gemini.
+    start(line.text, { slow, id: lineId, voice: line.voice, accent: line.accent, tone: line.tone, kokoroVoice: prefs.mode === "kokoro" ? line.kokoroVoice : undefined, kokoroFallback: line.kokoroVoice, pitch: line.g === "m" ? 0.8 : line.g === "f" ? 1.15 : 1 });
+    await done;
+  }
+  if (my !== seqToken) return false;
+  setSeq({ id: null, index: -1, total: 0 });
+  return true;
+}
+
+/** Si esa secuencia está sonando, la detiene; si no, la reproduce. */
+export function toggleSequence(lines, opts = {}) {
+  if (seq.id && seq.id === (opts.id || "seq")) { stopAudio(); return Promise.resolve(false); }
+  return playSequence(lines, opts);
+}
+
+/**
+ * Audio (Blob WAV) de un texto con la voz activa, sin reproducirlo: para dibujar su onda y su
+ * entonación. Devuelve { blob, engine } o null si solo hay voz del navegador (no se puede capturar).
+ */
+export async function audioBlobFor(text, { voice, kokoroVoice, accent, tone } = {}) {
+  if ((prefs.mode === "kokoro" || kokoroVoice) && kokoroReady()) {
+    try { return { blob: (await kokoroBlob(text, kokoroVoice)).blob, engine: "kokoro" }; } catch { /* prueba la natural */ }
+  }
+  if (prefs.ai && prefs.mode !== "browser") {
+    try { return { blob: (await naturalBlob(text, voice || prefs.voice, accent || prefs.accent, tone || prefs.tone)).blob, engine: "natural" }; } catch { /* prueba Kokoro */ }
+  }
+  if (kokoroReady()) {
+    try { return { blob: (await kokoroBlob(text, kokoroVoice)).blob, engine: "kokoro" }; } catch { /* sin audio capturable */ }
+  }
+  return null;
 }

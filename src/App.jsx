@@ -82,9 +82,9 @@ export default function App() {
     if (installEvt) { installEvt.prompt(); setInstallEvt(null); return; }
     toast(/iPhone|iPad/.test(navigator.userAgent) ? "En iPhone: botón Compartir → «Agregar a inicio»." : "En el menú del navegador elige «Instalar app» o «Agregar a pantalla de inicio».");
   };
-  const { voiceMode, voice, accent, rate, kokoroVoice, kokoroEnabled } = s.profile;
+  const { voiceMode, voice, accent, tone, rate, kokoroVoice, kokoroEnabled } = s.profile;
   const geminiVoice = ai && server.gemini !== false;
-  useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, rate, ai: geminiVoice, kokoroVoice }); }, [voiceMode, voice, accent, rate, geminiVoice, kokoroVoice]);
+  useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, tone, rate, ai: geminiVoice, kokoroVoice }); }, [voiceMode, voice, accent, tone, rate, geminiVoice, kokoroVoice]);
   // Si ya descargó Kokoro, se carga desde la caché al abrir la app (sin volver a bajar el modelo).
   useEffect(() => { if (kokoroEnabled) loadKokoro(); }, [kokoroEnabled]);
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };

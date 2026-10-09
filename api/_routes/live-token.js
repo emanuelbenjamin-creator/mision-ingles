@@ -15,7 +15,7 @@ export default endpoint(async body => {
   const prof = body.profession && body.profession !== "general" ? profession(body.profession).en : "";
   const config = {
     responseModalities: ["AUDIO"],
-    systemInstruction: liveSystem(sc, level(body.level), { topic: body.topic, correction: body.correction, pace: body.pace, profession: prof }),
+    systemInstruction: liveSystem(sc, level(body.level), { topic: body.topic, correction: body.correction, pace: body.pace, profession: prof, accent: body.accent, tone: body.tone }),
     inputAudioTranscription: {},
     outputAudioTranscription: {},
     speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_IDS.includes(body.voice) ? body.voice : "Kore" } } },

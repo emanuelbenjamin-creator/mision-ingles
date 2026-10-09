@@ -4,6 +4,7 @@ import { exportState, importState } from "../lib/storage.js";
 import { addProfessionCards, defaultState } from "../lib/state.js";
 import { PROFESSIONS } from "../content/professions.js";
 import VoicePicker from "../components/VoicePicker.jsx";
+import { ACCENTS, TONES } from "../content/voices.js";
 import KokoroPanel from "../components/KokoroPanel.jsx";
 import { getLastFallback, lastEngine } from "../lib/audio.js";
 import { disableReminders, enableReminders, isIOS, pushSupported } from "../lib/push.js";
@@ -64,7 +65,10 @@ export default function Ajustes({ s, update, replace, server, onClose, toast, ai
           {p.voiceMode === "kokoro" && <KokoroPanel value={p.kokoroVoice || "af_heart"} onChange={kokoroVoice => set({ kokoroVoice })} onEnable={() => update(d => { d.profile.kokoroEnabled = true; })} />}
           <VoiceStatus natural={p.voiceMode !== "browser"} ai={ai} />
         </div>
-        <div className="field"><label htmlFor="stAccent">Acento</label><select id="stAccent" value={p.accent} onChange={e => set({ accent: e.target.value })}><option value="us">Estadounidense</option><option value="uk">Británico</option></select></div>
+        <div className="field"><label htmlFor="stAccent">Acento</label><select id="stAccent" value={p.accent} onChange={e => set({ accent: e.target.value })}>{ACCENTS.map(a => <option key={a.id} value={a.id}>{a.es}</option>)}</select>
+          {p.voiceMode === "kokoro" && !["us", "uk"].includes(p.accent) && <p className="small muted">Kokoro solo tiene voces de EE. UU. y Reino Unido. Para este acento usa la voz de Gemini.</p>}
+        </div>
+        <div className="field"><label htmlFor="stTone">Tono de la voz</label><select id="stTone" value={p.tone || "friendly"} onChange={e => set({ tone: e.target.value })}>{TONES.map(t => <option key={t.id} value={t.id}>{t.es}</option>)}</select><p className="small muted">El tono se aplica a la voz de Gemini.</p></div>
         <div className="field"><label htmlFor="stRate">Velocidad de la voz</label><select id="stRate" value={p.rate} onChange={e => set({ rate: +e.target.value })}>{[[0.75, "Lenta"], [0.9, "Normal"], [1, "Nativa"]].map(([v, n]) => <option key={v} value={v}>{n}</option>)}</select></div>
         {(server.accessCodeRequired || p.accessCode) && (
           <div className="field"><label htmlFor="stCode">Código de acceso al coach IA</label><input type="text" id="stCode" value={p.accessCode} onChange={e => set({ accessCode: e.target.value })} placeholder="Te lo da quien administra la app" autoComplete="off" /></div>

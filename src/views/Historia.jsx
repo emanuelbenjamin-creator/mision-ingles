@@ -60,8 +60,9 @@ export default function Historia({ s, update, today, ai, toast }) {
     try {
       // El historial incluye la escena actual (la última), a la que responde `say`.
       const history = scenes.map(sc => ({ scene: sceneText(sc, cast), say: sc.said || "" }));
-      const next = await api("story-turn", { story: adv.id, level: s.profile.level, say: text, history });
-      const all = [...scenes.slice(0, -1), { ...cur, said: text, correction: next.correction }, next];
+      // La corrección que llega con la escena nueva es de lo que el alumno acaba de decir: va en la escena anterior.
+      const { correction, ...next } = await api("story-turn", { story: adv.id, level: s.profile.level, say: text, history });
+      const all = [...scenes.slice(0, -1), { ...cur, said: text, correction }, next];
       setScenes(all);
       if (next.ending) finish(all, spoken);
       play(next);

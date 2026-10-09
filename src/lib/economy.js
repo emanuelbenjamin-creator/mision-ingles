@@ -17,7 +17,7 @@ export const economySupported = () => canRecognize() || (canRecord() && canServe
 
 const SPEECH_RMS = 0.025, SILENCE_MS = 1200, MAX_TURN_MS = 30000;
 
-export async function startEconomy({ opts, level, profession, onTranscript, onState, onError, onClose }) {
+export async function startEconomy({ opts, level, profession, onTranscript, onState, onError, onClose, onCard }) {
   let closed = false, muted = false, rec = null, stream = null, ctx = null, analyser = null, buf = null, speaking = false;
   const turns = [];
 
@@ -52,6 +52,7 @@ export async function startEconomy({ opts, level, profession, onTranscript, onSt
       if (closed) return;
       turns.push({ role: "model", text: r.reply });
       onTranscript("model", r.reply, aiOf(r));
+      if (onCard) (r.cards || []).forEach(onCard);
       onState("speaking");
       speaking = true;
       await speakAndWait(r.reply, { voice: opts.voice, accent: opts.accent, tone: opts.tone, kokoroFallback: opts.kokoroVoice });

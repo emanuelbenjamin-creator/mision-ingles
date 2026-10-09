@@ -467,3 +467,16 @@ body.diag-on.diag-min { padding-bottom: 56px; }
 .shadow-legend .lg.mine::before { background: var(--good); }
 .shadow-text .w-ok { color: var(--good); }
 .shadow-text .w-miss { color: var(--bad); text-decoration: underline wavy; text-underline-offset: 4px; }
+
+/* ---------- v3: tarjetas en vivo ---------- */
+.live-cards { display: grid; gap: 8px; }
+.lc { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; align-items: center; border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 12px; padding: 10px 12px; background: var(--surface); animation: lc-in .25s ease-out; }
+.lc > * { grid-column: 1; min-width: 0; overflow-wrap: anywhere; }
+.lc > .btn { grid-column: 2; grid-row: 1 / span 3; }
+.lc.correction { border-left-color: var(--flame); }
+.lc.challenge { border-left-color: var(--good); }
+.lc-tag { font-size: .7rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.lc .was { text-decoration: line-through; color: var(--bad); }
+.lc .now { font-weight: 700; color: var(--good); }
+@keyframes lc-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lc { animation: none; } }

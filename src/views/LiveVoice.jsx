@@ -6,7 +6,8 @@ import { ModelTag } from "../components/Diag.jsx";
 import { liveSupported, startLive } from "../lib/live.js";
 import { economySupported, startEconomy } from "../lib/economy.js";
 import { stopAudio } from "../lib/audio.js";
-import { addMistake, addXP, bumpSkill, completeMission, logSession } from "../lib/game.js";
+import { addCard, addMistake, addXP, bumpSkill, completeMission, logSession } from "../lib/game.js";
+import { cardKey, normalizeCard } from "../lib/cards.js";
 
 const STATE_LABEL = { idle: "Listo para llamar", connecting: "Conectando…", listening: "Te escucha · habla cuando quieras", thinking: "Pensando…", speaking: "Hablando…", ended: "Llamada terminada" };
 const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
@@ -26,6 +27,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
   const [err, setErr] = useState("");
   const [model, setModel] = useState(""); // modelo de la llamada (diagnóstico)
   const [reviewAi, setReviewAi] = useState(null);
+  const [cards, setCards] = useState([]); // tarjetas en vivo: correcciones, palabras y retos
   const sess = useRef(null);
   const started = useRef(0);
   const box = useRef(null);
@@ -56,8 +58,19 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
     return [...prev, { role, text: text.trim(), ai }];
   });
 
+  const onCard = c => { if (c) setCards(prev => (prev.some(x => cardKey(x) === cardKey(c)) ? prev : [...prev, c])); };
+  const saveCard = (i, c) => {
+    update(d => {
+      const ok = c.type === "correction"
+        ? addMistake(d, { wrong: c.original, right: c.corrected, why: c.explanation_es, rule: "En vivo", src: "voz en vivo" }, today)
+        : addCard(d, { front: c.word, back: c.meaning_es, ex: c.example, tag: "en vivo" });
+      return [ok ? "Guardada en tus tarjetas de repaso" : "Ya estaba en tus tarjetas"];
+    });
+    setCards(prev => prev.map((x, k) => (k === i ? { ...x, saved: true } : x)));
+  };
+
   const callEconomy = async () => {
-    setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false); setSuggestEco(false);
+    setErr(""); setReview(null); setTurns([]); setCards([]); setSecs(0); setMuted(false); setSuggestEco(false);
     stopAudio();
     setStatus("connecting");
     setModel("económico: modelos de texto en carrera + voz elegida");
@@ -66,7 +79,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
       started.current = Date.now();
       sess.current = await startEconomy({
         opts, level: s.profile.level, profession: s.profile.profession,
-        onTranscript, onState: setStatus,
+        onTranscript, onState: setStatus, onCard,
         onError: m => setErr(m),
         onClose: () => { sess.current = null; setStatus("ended"); },
       });
@@ -79,7 +92,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
 
   const call = async () => {
     if (useEco) return callEconomy();
-    setErr(""); setReview(null); setTurns([]); setSecs(0); setMuted(false); setSuggestEco(false);
+    setErr(""); setReview(null); setTurns([]); setCards([]); setSecs(0); setMuted(false); setSuggestEco(false);
     stopAudio();
     setStatus("connecting");
     try {
@@ -89,7 +102,7 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
       started.current = Date.now();
       sess.current = await startLive({
         token: t.token, model: t.model, config: t.config,
-        onTranscript, onState: setStatus,
+        onTranscript, onState: setStatus, onTool: (name, args) => onCard(normalizeCard(name, args)),
         onError: m => setErr(m),
         onClose: () => { sess.current = null; setStatus("ended"); },
       });
@@ -158,6 +171,22 @@ export default function LiveVoice({ s, update, today, ai, toast, opts, title, on
         </div>
       )}
       <p className="hint small" data-testid="spanish-bridge">¿No sabes cómo decir algo? <b>Dilo en español</b>: el coach te dice cómo se dice en inglés, te pide repetirlo y siguen en inglés.</p>
+      {cards.length > 0 && (
+        <div className="live-cards" data-testid="live-cards" aria-live="polite">
+          <div className="eyebrow">En esta llamada</div>
+          {cards.slice().reverse().map((c, k) => {
+            const i = cards.length - 1 - k;
+            return (
+              <div key={cardKey(c)} className={"lc " + c.type}>
+                {c.type === "correction" && <><span className="lc-tag">Corrección</span><div><span className="was">{c.original}</span> → <span className="now">{c.corrected}</span></div>{c.explanation_es && <div className="small muted">{c.explanation_es}</div>}</>}
+                {c.type === "word" && <><span className="lc-tag">Palabra nueva</span><div><b>{c.word}</b> · {c.meaning_es}</div>{c.example && <div className="small muted"><i>{c.example}</i></div>}</>}
+                {c.type === "challenge" && <><span className="lc-tag">Reto</span><div>{c.challenge_es}{c.target && <> · <b>{c.target}</b></>}</div></>}
+                {c.type !== "challenge" && <button type="button" className="btn ghost sm" disabled={c.saved} onClick={() => saveCard(i, c)}>{c.saved ? "Guardada" : "+ Guardar"}</button>}
+              </div>
+            );
+          })}
+        </div>
+      )}
       <div className="chat" ref={box} aria-live="polite">
         {turns.length === 0 && <p className="empty">{status === "idle" ? "Al llamar, el coach te saluda primero. Usa audífonos para evitar eco y habla con naturalidad: puedes interrumpirlo como en una llamada real." : "El coach está empezando la llamada… La transcripción aparece aquí."}</p>}
         {turns.map((t, i) => (

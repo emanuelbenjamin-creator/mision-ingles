@@ -25,6 +25,7 @@ export default function EnVivo(props) {
   const [scen, setScen] = useState(scenarios[0].id);
   const [correction, setCorrection] = useState("end");
   const [pace, setPace] = useState("normal");
+  const cards = s.profile.liveCards !== false;
   const [locked, setLocked] = useState(false);
   const custom = s.profile.liveVoiceMode === "custom";
   const engine = s.profile.liveEngine || (server.gemini === false ? "economy" : "live");
@@ -37,7 +38,7 @@ export default function EnVivo(props) {
   const voice = custom ? s.profile.liveVoice || s.profile.voice || "Kore" : who.voice;
   const accent = custom ? s.profile.accent || "us" : who.accent;
   const tone = custom ? s.profile.tone || "friendly" : who.tone;
-  const opts = { scenario, topic: mode === "free" || mode === "tutor" ? topic : "", correction: mode === "tutor" ? "now" : correction, pace, voice, accent, tone, kokoroVoice: custom ? undefined : who.kokoroVoice };
+  const opts = { scenario, topic: mode === "free" || mode === "tutor" ? topic : "", correction: mode === "tutor" ? "now" : correction, pace, voice, accent, tone, cards, kokoroVoice: custom ? undefined : who.kokoroVoice };
   const hello = `Hi, I'm ${who.name}. Ready when you are!`;
 
   const hist = s.liveSessions || [];
@@ -54,7 +55,7 @@ export default function EnVivo(props) {
           <p className="muted">Una llamada real con tu coach de inglés: hablas, te responde con voz natural y puedes interrumpirlo. Al colgar recibes tu revisión con errores y puntajes.</p>
         </div>
         <div className="card">
-          <LiveVoice key={scenario + voice + accent + tone + pace + correction + engine} {...props} opts={opts} title={title} onLiveChange={setLocked} engine={engine} onEngineChange={setEngine} />
+          <LiveVoice key={scenario + voice + accent + tone + pace + correction + engine + cards} {...props} opts={opts} title={title} onLiveChange={setLocked} engine={engine} onEngineChange={setEngine} />
         </div>
         <div className="card">
           <div className="card-head"><h2>Tus llamadas</h2><span className="small muted">hoy {mm(todaySecs)} · semana {mm(weekSecs)}</span></div>
@@ -104,6 +105,16 @@ export default function EnVivo(props) {
                 <button type="button" aria-pressed={correction === "end"} onClick={() => setCorrection("end")}>Al final</button>
                 <button type="button" aria-pressed={correction === "now"} onClick={() => setCorrection("now")}>Al momento</button>
               </div>
+            </div>
+          )}
+          {mode !== "ielts" && (
+            <div className="field">
+              <label>Tarjetas en pantalla</label>
+              <div className="seg" role="group" aria-label="Tarjetas en pantalla">
+                <button type="button" aria-pressed={cards} onClick={() => update(d => { d.profile.liveCards = true; })}>Activadas</button>
+                <button type="button" aria-pressed={!cards} onClick={() => update(d => { d.profile.liveCards = false; })}>Apagadas</button>
+              </div>
+              <p className="small muted">Mientras hablan, el coach te muestra correcciones, palabras nuevas y retos. Puedes guardarlos con un toque. Si la llamada no conecta, prueba a apagarlas.</p>
             </div>
           )}
           {mode !== "ielts" && (

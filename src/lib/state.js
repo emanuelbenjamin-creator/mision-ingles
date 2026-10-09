@@ -10,7 +10,7 @@ export function seedCards() {
 export function defaultState() {
   return {
     v: STATE_VERSION, updatedAt: 0,
-    profile: { name: "", level: "B1", goal: "trabajo", dailyGoal: 50, rate: 0.9, onboarded: false, accessCode: "", voiceMode: "natural", voice: "Kore", accent: "us", tone: "friendly", profession: "general", liveVoice: "Puck", liveVoiceMode: "character", theme: "system", kokoroVoice: "af_heart", kokoroEnabled: false },
+    profile: { name: "", level: "B1", goal: "trabajo", dailyGoal: 50, rate: 0.9, onboarded: false, accessCode: "", voiceMode: "natural", voice: "Kore", accent: "us", tone: "friendly", profession: "general", liveVoice: "Puck", liveVoiceMode: "character", liveCards: true, theme: "system", kokoroVoice: "af_heart", kokoroEnabled: false },
     xpByDay: {}, totalXP: 0, gems: 0,
     skills: { pron: null, flu: null, gram: null, vocab: null, comp: null },
     sessions: [], missions: {}, reviewsByDay: {}, newByDay: {},

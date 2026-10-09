@@ -4,6 +4,8 @@
  * conversión están exportadas para probarlas.
  */
 
+import { toolResponses } from "./cards.js";
+
 /** Promedia muestras para bajar de inRate a outRate (ej. 48000 → 16000). */
 export function downsample(input, inRate, outRate = 16000) {
   if (outRate >= inRate) return input;
@@ -65,9 +67,10 @@ registerProcessor("pcm-capture", PcmCapture);`;
 
 /**
  * Inicia la sesión. Callbacks: onTranscript(role, text), onState("connecting"|"listening"|"speaking"),
- * onError(mensaje), onClose(). Devuelve { stop(), setMuted(bool) }.
+ * onError(mensaje), onClose(), onTool(nombre, args) cuando el coach muestra una tarjeta en pantalla.
+ * Devuelve { stop(), setMuted(bool) }.
  */
-export async function startLive({ token, model, config, onTranscript, onState, onError, onClose, kickoff = KICKOFF }) {
+export async function startLive({ token, model, config, onTranscript, onState, onError, onClose, onTool, kickoff = KICKOFF }) {
   onState("connecting");
   const { GoogleGenAI } = await import("@google/genai");
   const ai = new GoogleGenAI({ apiKey: token, httpOptions: { apiVersion: "v1alpha" } });
@@ -103,6 +106,12 @@ export async function startLive({ token, model, config, onTranscript, onState, o
     callbacks: {
       onopen: () => onState("listening"),
       onmessage: m => {
+        // Tarjetas en vivo: el coach llama una función; se muestra y se le confirma para que siga hablando.
+        const calls = m && m.toolCall && m.toolCall.functionCalls;
+        if (calls && calls.length) {
+          for (const fc of calls) { try { if (onTool) onTool(fc.name, fc.args); } catch { /* una tarjeta mala no corta la llamada */ } }
+          try { session.sendToolResponse({ functionResponses: toolResponses(calls) }); } catch { /* sesión cerrada */ }
+        }
         const sc = m && m.serverContent;
         if (!sc) return;
         if (sc.interrupted) flush();

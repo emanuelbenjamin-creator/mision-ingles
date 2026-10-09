@@ -456,3 +456,14 @@ body.diag-on.diag-min { padding-bottom: 56px; }
 .dl.s1 .bub { background: var(--accent-soft); border-bottom-left-radius: 16px; border-bottom-right-radius: 4px; }
 .dl.on .bub { box-shadow: 0 0 0 2px var(--accent); }
 .hidden-script .bub { color: var(--muted); letter-spacing: 1px; user-select: none; }
+
+/* ---------- v3: shadowing ---------- */
+.shadow-text { font-size: 1.35rem; font-weight: 700; line-height: 1.6; }
+.shadow-text span { border-radius: 6px; padding: 1px 2px; transition: background .08s; }
+.shadow-text .k-on { background: var(--accent-soft); color: var(--accent); }
+.shadow-waves { width: 100%; height: 190px; display: block; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.shadow-legend { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 6px; }
+.shadow-legend .lg::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; background: var(--accent); }
+.shadow-legend .lg.mine::before { background: var(--good); }
+.shadow-text .w-ok { color: var(--good); }
+.shadow-text .w-miss { color: var(--bad); text-decoration: underline wavy; text-underline-offset: 4px; }

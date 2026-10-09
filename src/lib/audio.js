@@ -96,12 +96,12 @@ function playElement(a, id, my, engine, model = null) {
   });
 }
 
-function playBrowser(text, slow, id, my, accent = prefs.accent, pitch = 1) {
+function playBrowser(text, slow, id, my, accent = prefs.accent, pitch = 1, speed = 0) {
   const synth = window.speechSynthesis;
   if (!synth) { setState({ id: null, status: "idle", engine: null }); return false; }
   const u = new SpeechSynthesisUtterance(text);
   u.lang = accentOf(accent).lang;
-  u.rate = slow ? 0.65 : prefs.rate;
+  u.rate = speed ? Math.min(1.5, Math.max(0.6, speed)) * 0.95 : slow ? 0.65 : prefs.rate;
   u.pitch = pitch;
   const v = browserVoice(accent);
   if (v) u.voice = v;
@@ -137,13 +137,13 @@ async function kokoroBlob(text, voice) {
   return { blob, model };
 }
 
-async function playKokoro(text, slow, id, my, voice) {
+async function playKokoro(text, slow, id, my, voice, speed) {
   setState({ id, status: "loading", engine: "kokoro" });
   const { blob, model } = await kokoroBlob(text, voice);
   if (my !== turn) return true;
   const url = URL.createObjectURL(blob);
   const a = new Audio(url);
-  a.playbackRate = slow ? 0.8 : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
+  a.playbackRate = rateOf(speed, slow, 0.8);
   a.addEventListener("ended", () => URL.revokeObjectURL(url));
   await playElement(a, id, my, "kokoro", model);
   return true;
@@ -155,18 +155,21 @@ function reportFallback(reason) {
   if (changed && onFallback) onFallback(reason);
 }
 
-/** Reproduce un texto. opts: { slow, id, voice, kokoroVoice, accent, tone } (los cuatro últimos, para personajes). */
+/** Reproduce un texto. opts: { slow, speed, id, voice, kokoroVoice, kokoroFallback, accent, tone, pitch } (voz y acento, para personajes). */
 export function playAudio(text, opts = {}) {
   if (seq.id) { seqToken++; setSeq({ id: null, index: -1, total: 0 }); }
   return start(text, opts);
 }
 
-async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoroFallback, accent, tone, pitch } = {}) {
+/** Velocidad del <audio>: `speed` (0.6–1.5) manda sobre lento/normal. */
+const rateOf = (speed, slow, slowRate) => (speed ? Math.min(1.5, Math.max(0.6, speed)) : slow ? slowRate : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9)));
+
+async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoroFallback, accent, tone, pitch, speed } = {}) {
   halt();
   const my = turn;
   if (prefs.mode === "kokoro" || kokoroVoice) {
     if (kokoroReady()) {
-      try { if (await playKokoro(text, slow, id, my, kokoroVoice)) return; }
+      try { if (await playKokoro(text, slow, id, my, kokoroVoice, speed)) return; }
       catch (e) { if (my !== turn) return; reportFallback("La voz Kokoro falló: " + ((e && e.message) || "error")); }
     } else reportFallback("La voz Kokoro aún no está descargada en este dispositivo (Ajustes → Voz).");
   }
@@ -177,7 +180,7 @@ async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoro
       if (my !== turn) return;
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
-      a.playbackRate = slow ? 0.75 : Math.min(1.2, Math.max(0.7, prefs.rate / 0.9));
+      a.playbackRate = rateOf(speed, slow, 0.75);
       a.addEventListener("ended", () => URL.revokeObjectURL(url));
       await playElement(a, id, my, "natural", model);
       lastFallback = null;
@@ -187,12 +190,12 @@ async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoro
       reportFallback((e && e.message) || "La voz natural no respondió.");
       // Respaldo de calidad: Kokoro, si ya está descargada en este dispositivo.
       if (kokoroReady()) {
-        try { if (await playKokoro(text, slow, id, my, kokoroFallback)) return; } catch { /* sigue con la del navegador */ }
+        try { if (await playKokoro(text, slow, id, my, kokoroFallback, speed)) return; } catch { /* sigue con la del navegador */ }
         if (my !== turn) return;
       }
     }
   }
-  playBrowser(text, slow, id, my, accent || prefs.accent, pitch);
+  playBrowser(text, slow, id, my, accent || prefs.accent, pitch, speed);
 }
 
 /** Si ese mismo audio está sonando o cargando, lo detiene; si no, lo reproduce. */

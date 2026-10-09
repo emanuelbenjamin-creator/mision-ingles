@@ -37,6 +37,25 @@ export function completeMission(s, id, label, today) {
   return addXP(s, MISSION_XP[id], today, "Misión: " + label);
 }
 
+export const PLAY_XP_CAP = 40;
+/** XP de la sección Jugar (historias, juegos, manos libres), con un tope diario para que no reemplace a las misiones. */
+export function addPlayXP(s, n, today, why) {
+  s.playXP = s.playXP || {};
+  const left = Math.max(0, PLAY_XP_CAP - (s.playXP[today] || 0));
+  const give = Math.min(left, Math.max(0, Math.round(n)));
+  if (!give) return [`${why} · ya llegaste al tope de XP de juegos por hoy`];
+  s.playXP[today] = (s.playXP[today] || 0) + give;
+  return addXP(s, give, today, why);
+}
+
+/** Guarda el récord de un juego. Devuelve true si es un récord nuevo. */
+export function setRecord(s, game, score) {
+  s.games = s.games || {};
+  if (!(score > (s.games[game] || 0))) return false;
+  s.games[game] = score;
+  return true;
+}
+
 /** Promedio móvil: 70% historia, 30% última sesión. */
 export function bumpSkill(s, k, v) {
   if (v == null || Number.isNaN(Number(v))) return;

@@ -16,6 +16,7 @@ import pronAssess from "./_routes/pron-assess.js";
 import pushSubscribe from "./_routes/push-subscribe.js";
 import reading from "./_routes/reading.js";
 import speakEvaluate from "./_routes/speak-evaluate.js";
+import storyTurn from "./_routes/story-turn.js";
 import transcribe from "./_routes/transcribe.js";
 import tts from "./_routes/tts.js";
 import voiceTurn from "./_routes/voice-turn.js";
@@ -43,6 +44,7 @@ export const ROUTES = {
   "push-subscribe": pushSubscribe,
   "reading": reading,
   "speak-evaluate": speakEvaluate,
+  "story-turn": storyTurn,
   "transcribe": transcribe,
   "tts": tts,
   "voice-turn": voiceTurn,

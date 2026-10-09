@@ -13,6 +13,7 @@ import Repaso from "./views/Repaso.jsx";
 import Leer from "./views/Leer.jsx";
 import Liga from "./views/Liga.jsx";
 import EnVivo from "./views/EnVivo.jsx";
+import Jugar from "./views/Jugar.jsx";
 import { syncLeague, weekXP } from "./lib/league.js";
 import { reportPractice } from "./lib/push.js";
 import Ajustes from "./views/Ajustes.jsx";
@@ -26,10 +27,10 @@ import { configureSpeech } from "./lib/speech.js";
 import { loadKokoro } from "./lib/kokoro.js";
 import { addProfessionCards } from "./lib/state.js";
 
-const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
+const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["jugar", "Jugar", "game"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
 const SEP_BEFORE = "repaso";
 const prefersDark = () => typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-const TAB_IDS = ["hoy", "envivo", "hablar", "conversar", "leer", "gramatica", "repaso", "liga"];
+const TAB_IDS = TABS.map(t => t[0]);
 const readTab = () => {
   const h = (typeof location !== "undefined" && location.hash.slice(1)) || "";
   if (TAB_IDS.includes(h)) return h;
@@ -41,7 +42,7 @@ export default function App() {
   const toast = useCallback(msg => setToasts(t => [...t, msg]), []);
   const onMessages = useCallback(msgs => setToasts(t => [...t, ...msgs]), []);
   const [s, update, replace] = useStore(onMessages);
-  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado" });
+  const [nav, setNav] = useState({ tab: readTab(), mode: "speak", soundId: null, topic: null, scen: null, chatMode: "chat", leerMode: "dictado", jugarMode: "historias" });
   const [server, setServer] = useState({ ai: false, accessCodeRequired: false, checked: false });
   const [settings, setSettings] = useState(false);
   const [modal, setModal] = useState(null); // "usage" | "help" | "models"
@@ -150,6 +151,7 @@ export default function App() {
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}
             {nav.tab === "leer" && <Leer {...common} mode={nav.leerMode} setMode={leerMode => setNav(n => ({ ...n, leerMode }))} />}
+            {nav.tab === "jugar" && <Jugar {...common} mode={nav.jugarMode} setMode={jugarMode => setNav(n => ({ ...n, jugarMode }))} />}
             {nav.tab === "gramatica" && <Gramatica {...common} topic={nav.topic} setTopic={topic => setNav(n => ({ ...n, topic }))} />}
             {nav.tab === "repaso" && <Repaso {...common} />}
             {nav.tab === "liga" && <Liga {...common} league={league} setLeague={setLeague} refresh={refreshLeague} />}

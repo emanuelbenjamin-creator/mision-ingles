@@ -14,7 +14,7 @@ export function defaultState() {
     xpByDay: {}, totalXP: 0, gems: 0,
     skills: { pron: null, flu: null, gram: null, vocab: null, comp: null },
     sessions: [], missions: {}, reviewsByDay: {}, newByDay: {},
-    cards: seedCards(), mistakes: [], grammar: {}, badges: {}, speakSeconds: 0, skillSnap: {}, lessons: {}, ielts: [], liveSessions: [],
+    cards: seedCards(), mistakes: [], grammar: {}, badges: {}, speakSeconds: 0, skillSnap: {}, lessons: {}, ielts: [], liveSessions: [], stories: [], games: {}, playXP: {},
   };
 }
 
@@ -25,8 +25,8 @@ export function migrate(raw) {
   const s = { ...base, ...raw };
   s.profile = { ...base.profile, ...raw.profile };
   s.skills = { ...base.skills, ...raw.skills };
-  for (const k of ["xpByDay", "missions", "reviewsByDay", "newByDay", "grammar", "badges", "skillSnap", "lessons"]) if (typeof s[k] !== "object" || Array.isArray(s[k]) || !s[k]) s[k] = {};
-  for (const k of ["sessions", "mistakes", "cards", "ielts", "liveSessions"]) if (!Array.isArray(s[k])) s[k] = base[k];
+  for (const k of ["xpByDay", "missions", "reviewsByDay", "newByDay", "grammar", "badges", "skillSnap", "lessons", "games", "playXP"]) if (typeof s[k] !== "object" || Array.isArray(s[k]) || !s[k]) s[k] = {};
+  for (const k of ["sessions", "mistakes", "cards", "ielts", "liveSessions", "stories"]) if (!Array.isArray(s[k])) s[k] = base[k];
   // Agrega al mazo las tarjetas nuevas del contenido que aún no existan.
   const ids = new Set(s.cards.map(c => c.id));
   for (const c of base.cards) if (!ids.has(c.id)) s.cards.push(c);

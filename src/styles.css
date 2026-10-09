@@ -480,3 +480,27 @@ body.diag-on.diag-min { padding-bottom: 56px; }
 .lc .now { font-weight: 700; color: var(--good); }
 @keyframes lc-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .lc { animation: none; } }
+
+/* ---------- v3: jugar (historias, juegos, manos libres) ---------- */
+.saybox { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+@media (max-width: 560px) { .saybox { grid-template-columns: minmax(0, 1fr) auto; } .saybox > .btn:first-child { grid-column: 1 / -1; } }
+.adv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.adv { display: grid; gap: 6px; text-align: left; align-content: start; cursor: pointer; font: inherit; color: inherit; }
+.adv:hover:not(:disabled) { border-color: var(--accent); }
+.adv:disabled { opacity: .6; cursor: not-allowed; }
+.adv b { font-size: 1.1rem; }
+.adv .pill { justify-self: start; }
+.story-log { display: grid; gap: 16px; max-height: 46vh; overflow-y: auto; padding-right: 4px; }
+.scene { display: grid; gap: 8px; }
+.scene .narr { font-style: italic; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; line-height: 1.6; }
+.scene .fix { font-size: .875rem; justify-self: end; max-width: 85%; }
+.hf { display: grid; gap: 14px; justify-items: center; text-align: center; padding-block: 28px; }
+.hf-orb { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--grad-ring-a), var(--accent-2)); }
+.hf-orb svg { width: 40px; height: 40px; }
+.hf.listening .hf-orb { background: var(--good); animation: hf-pulse 1.2s ease-in-out infinite; }
+.hf-state { font-size: 1.1rem; }
+.hf-text { font-size: 1.5rem; font-weight: 700; line-height: 1.5; max-width: 26ch; min-height: 3em; }
+.hf-btn { font-size: 1.1rem; padding: 14px 28px; }
+.cmds { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+@keyframes hf-pulse { 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .hf.listening .hf-orb { animation: none; } }

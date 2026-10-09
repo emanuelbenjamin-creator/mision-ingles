@@ -247,3 +247,26 @@ test("manos libres: el coach dice, tú repites y los comandos de voz funcionan",
   expect(texts.at(-1)).toMatch(/Well done/);
   await expect(page.getByTestId("play-xp")).toContainText("2 / 40");
 });
+
+test("panel: «Lo nuevo» lleva a cada función, marca las vistas y se puede ocultar", async ({ page }) => {
+  await start(page);
+  const box = page.getByTestId("whats-new");
+  await expect(box.getByRole("button")).toHaveCount(9); // 8 funciones + Ocultar
+  await expect(box).toContainText("8 de 8 por probar");
+  await page.getByTestId("new-shadow").click();
+  await expect(page.getByTestId("shadowing")).toBeVisible();
+  await tab(page, "Hoy");
+  await expect(box).toContainText("7 de 8 por probar");
+  await expect(page.getByTestId("new-shadow")).toHaveClass(/seen/);
+  await page.getByTestId("new-handsfree").click();
+  await expect(page.getByTestId("handsfree")).toBeVisible();
+  await tab(page, "Hoy");
+  await page.getByTestId("new-accents").click();
+  await expect(page.locator("#stAccent")).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await box.getByRole("button", { name: "Ocultar" }).click();
+  await expect(box).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("whats-new")).toHaveCount(0);
+});

@@ -146,7 +146,7 @@ export default function App() {
         ) : (
           <section className="view" key={nav.tab}>
             <ErrorBoundary resetKey={nav.tab}>
-            {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} />}
+            {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} update={update} onSettings={() => setSettings(true)} />}
             {nav.tab === "envivo" && <EnVivo {...common} />}
             {nav.tab === "hablar" && <Hablar {...common} mode={nav.mode} setMode={mode => setNav(n => ({ ...n, mode }))} soundId={nav.soundId} setSoundId={soundId => setNav(n => ({ ...n, soundId }))} />}
             {nav.tab === "conversar" && <Conversar key={nav.scen || "hoy"} {...common} scen={nav.scen} setScen={scen => setNav(n => ({ ...n, scen }))} mode={nav.chatMode} setMode={chatMode => setNav(n => ({ ...n, chatMode }))} />}

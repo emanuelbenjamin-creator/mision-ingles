@@ -3,6 +3,7 @@ import Ring from "../components/Ring.jsx";
 import Meter from "../components/Meter.jsx";
 import Chart14 from "../components/Chart14.jsx";
 import WeeklyReport from "../components/WeeklyReport.jsx";
+import WhatsNew from "../components/WhatsNew.jsx";
 import { LEVELS, GOALS } from "../content/meta.js";
 import { addDays } from "../lib/dates.js";
 import { streak, missionDone, MISSION_XP, BADGES } from "../lib/game.js";
@@ -12,7 +13,7 @@ import { levelIdx, levelProgress } from "../lib/level.js";
 
 const SKILLS = [["pron", "Pronunciación"], ["flu", "Fluidez"], ["gram", "Gramática"], ["vocab", "Vocabulario"], ["comp", "Comprensión"]];
 
-export default function Hoy({ s, today, go, league, server = {} }) {
+export default function Hoy({ s, today, go, league, server = {}, update, onSettings }) {
   const xp = s.xpByDay[today] || 0, goal = s.profile.dailyGoal;
   const st = streak(s, today);
   const weekXP = [...Array(7)].reduce((a, _, i) => a + (s.xpByDay[addDays(today, -i)] || 0), 0);
@@ -46,6 +47,8 @@ export default function Hoy({ s, today, go, league, server = {} }) {
         </div>
         <Ring value={xp} goal={goal} />
       </div>
+
+      {update && <WhatsNew s={s} update={update} go={go} onSettings={onSettings} />}
 
       <div className="grid2">
         <div className="stack">

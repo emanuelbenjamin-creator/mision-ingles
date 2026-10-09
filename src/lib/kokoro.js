@@ -3,16 +3,17 @@
  * descargarla una vez (~90 MB, queda en la caché del navegador).
  */
 
-export const KOKORO_VOICES = [
-  { id: "af_heart", label: "Heart · EE. UU. (mujer)", accent: "us" },
-  { id: "af_bella", label: "Bella · EE. UU. (mujer)", accent: "us" },
-  { id: "am_michael", label: "Michael · EE. UU. (hombre)", accent: "us" },
-  { id: "am_fenrir", label: "Fenrir · EE. UU. (hombre)", accent: "us" },
-  { id: "bf_emma", label: "Emma · Reino Unido (mujer)", accent: "uk" },
-  { id: "bf_isabella", label: "Isabella · Reino Unido (mujer)", accent: "uk" },
-  { id: "bm_george", label: "George · Reino Unido (hombre)", accent: "uk" },
-  { id: "bm_fable", label: "Fable · Reino Unido (hombre)", accent: "uk" },
-];
+const NAMES = {
+  us: { f: ["heart", "bella", "nicole", "sarah", "nova", "kore", "aoede", "jessica", "river", "sky", "alloy"], m: ["michael", "fenrir", "puck", "adam", "echo", "eric", "liam", "onyx", "santa"] },
+  uk: { f: ["emma", "isabella", "alice", "lily"], m: ["george", "fable", "daniel", "lewis"] },
+};
+const cap = x => x[0].toUpperCase() + x.slice(1);
+/** Las 28 voces en inglés de Kokoro: { id, name, accent: "us"|"uk", g: "f"|"m", label }. */
+export const KOKORO_VOICES = ["us", "uk"].flatMap(accent => ["f", "m"].flatMap(g => NAMES[accent][g].map(n => ({
+  id: `${accent === "us" ? "a" : "b"}${g}_${n}`, name: cap(n), accent, g,
+  label: `${cap(n)} · ${accent === "us" ? "EE. UU." : "Reino Unido"} (${g === "f" ? "mujer" : "hombre"})`,
+}))));
+export const KOKORO_IDS = KOKORO_VOICES.map(v => v.id);
 
 let worker = null;
 let state = { status: "idle", progress: 0, error: "" }; // idle | downloading | ready | error

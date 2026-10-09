@@ -45,7 +45,7 @@ async function openSettings(page) {
 test("primer uso: prueba de nivel y panel", async ({ page }) => {
   await mockApi(page);
   await onboard(page);
-  await expect(page.locator(".mission")).toHaveCount(7);
+  await expect(page.locator(".mission")).toHaveCount(8);
   await expect(xp(page)).toContainText("0 / 50 XP");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
@@ -394,6 +394,9 @@ test("En vivo: panel dedicado con modos, tema, voz y llamada", async ({ page }) 
   await setup.getByRole("button", { name: /Profesor de speaking/ }).click();
   await setup.getByRole("button", { name: "Football" }).click();
   await setup.getByRole("button", { name: "Lento y claro" }).click();
+  // Por defecto habla el personaje del escenario; aquí se elige otra voz a mano.
+  await expect(page.getByTestId("character")).toContainText("Sam");
+  await setup.getByRole("button", { name: "Elegir otra" }).click();
   await setup.getByRole("button", { name: "Masculinas" }).click();
   await setup.getByRole("radio", { name: /Charon/ }).click();
   await expect(setup).toContainText("Charon · Informativo");
@@ -498,6 +501,7 @@ test("voz Kokoro: se descarga desde Ajustes y luego suena en los botones", async
   await page.getByRole("button", { name: "Kokoro (en tu equipo)" }).click();
   await page.getByRole("button", { name: "Descargar voz Kokoro" }).click();
   await expect(page.getByTestId("kokoro")).toContainText("Voz Kokoro lista");
+  await page.getByRole("button", { name: "Reino Unido · hombres" }).click();
   await page.getByRole("radio", { name: /George/ }).click();
   await page.getByRole("button", { name: "Guardar" }).click();
   await page.getByRole("tab", { name: "Gramática" }).click();

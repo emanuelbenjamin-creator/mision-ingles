@@ -3,6 +3,7 @@ import chatReview from "./_routes/chat-review.js";
 import chatSuggest from "./_routes/chat-suggest.js";
 import chatTurn from "./_routes/chat-turn.js";
 import cronRemind from "./_routes/cron-remind.js";
+import dialogue from "./_routes/dialogue.js";
 import dictation from "./_routes/dictation.js";
 import grammarAsk from "./_routes/grammar-ask.js";
 import grammarExplain from "./_routes/grammar-explain.js";
@@ -15,6 +16,7 @@ import pronAssess from "./_routes/pron-assess.js";
 import pushSubscribe from "./_routes/push-subscribe.js";
 import reading from "./_routes/reading.js";
 import speakEvaluate from "./_routes/speak-evaluate.js";
+import storyTurn from "./_routes/story-turn.js";
 import transcribe from "./_routes/transcribe.js";
 import tts from "./_routes/tts.js";
 import voiceTurn from "./_routes/voice-turn.js";
@@ -29,6 +31,7 @@ export const ROUTES = {
   "chat-suggest": chatSuggest,
   "chat-turn": chatTurn,
   "cron-remind": cronRemind,
+  dialogue,
   "dictation": dictation,
   "grammar-ask": grammarAsk,
   "grammar-explain": grammarExplain,
@@ -41,6 +44,7 @@ export const ROUTES = {
   "push-subscribe": pushSubscribe,
   "reading": reading,
   "speak-evaluate": speakEvaluate,
+  "story-turn": storyTurn,
   "transcribe": transcribe,
   "tts": tts,
   "voice-turn": voiceTurn,

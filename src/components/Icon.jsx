@@ -28,6 +28,7 @@ const P = {
   chevR: <path d="m9 6 6 6-6 6" />,
   chevD: <path d="m6 9 6 6 6-6" />,
   save: <><path d="M5 4h11l3 3v13H5z" /><path d="M8 4v5h7V4M8 20v-6h8v6" /></>,
+  game: <><rect x="2" y="7" width="20" height="11" rx="5" /><path d="M7 11v3M5.5 12.5h3" /><circle cx="15.5" cy="11.5" r=".9" fill="currentColor" /><circle cx="18" cy="13.5" r=".9" fill="currentColor" /></>,
   layers: <><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /></>,
 };
 

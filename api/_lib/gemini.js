@@ -197,13 +197,17 @@ export async function generate({ system, contents, json = true, temperature = 0.
 }
 
 /** Texto → audio PCM con los modelos TTS gratuitos en carrera. Devuelve { data: base64, rate }. */
-export async function synthesize({ text, voice = "Kore", style = "" }) {
-  if (testGenerator) { note({ kind: "tts", model: "test" }); return testGenerator({ tts: true, text, voice, style }); }
+export async function synthesize({ text, voice = "Kore", style = "", speakers = null }) {
+  if (testGenerator) { note({ kind: "tts", model: "test" }); return testGenerator({ tts: true, text, voice, style, speakers }); }
   const c = getClient();
+  // Con speakers = [{ name, voice }, { name, voice }] el texto es un guion «Nombre: frase» a dos voces.
+  const speechConfig = speakers
+    ? { multiSpeakerVoiceConfig: { speakerVoiceConfigs: speakers.map(s => ({ speaker: s.name, voiceConfig: { prebuiltVoiceConfig: { voiceName: s.voice } } })) } }
+    : { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } };
   const run = (model, signal) => c.models.generateContent({
     model,
     contents: [{ role: "user", parts: [{ text: style ? `${style}\n${text}` : text }] }],
-    config: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }, abortSignal: signal },
+    config: { responseModalities: ["AUDIO"], speechConfig, abortSignal: signal },
   }).then(r => {
     const parts = (r && r.candidates && r.candidates[0] && r.candidates[0].content && r.candidates[0].content.parts) || [];
     const p = parts.find(x => x.inlineData && x.inlineData.data);

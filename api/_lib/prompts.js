@@ -1,6 +1,7 @@
 import { LEVELS, GOALS } from "../../src/content/meta.js";
 import { SCENARIOS } from "../../src/content/scenarios.js";
 import { PROFESSIONS } from "../../src/content/professions.js";
+import { ACCENT_IDS, TONE_IDS, accentOf, liveVoiceLine } from "../../src/content/voices.js";
 import { HttpError } from "./http.js";
 
 /* Validación de entradas y normalización de salidas: nunca se confía en lo que manda el navegador ni en el formato del modelo. */
@@ -96,9 +97,11 @@ export const FREE_TALK = { id: "free", name: "Conversación libre", role: "Alex,
 export const TUTOR = { id: "tutor", name: "Profesor de speaking", role: "Sam, a patient English speaking tutor" };
 
 /**
- * Instrucciones para Gemini Live. opts: { sc, lv, topic, correction: "now"|"end", pace: "slow"|"normal", profession }.
+ * Instrucciones para Gemini Live. opts: { sc, lv, topic, correction: "now"|"end", pace: "slow"|"normal", profession, accent, tone }.
  */
 export function liveSystem(sc, lv, opts = {}) {
+  // Acento y tono del personaje (listas cerradas); sin ellos no se agrega nada.
+  const voice = ACCENT_IDS.includes(opts.accent) || TONE_IDS.includes(opts.tone) ? "\n" + liveVoiceLine(opts.accent, opts.tone) : "";
   const pace = opts.pace === "slow"
     ? "Speak slowly and very clearly, with short pauses between sentences, using simple words."
     : "Speak at a natural but clear pace.";
@@ -107,7 +110,7 @@ export function liveSystem(sc, lv, opts = {}) {
 Part 1: introduce yourself briefly, ask the candidate's name, then 4 short questions about familiar topics (home, work or studies, hobbies). Part 2: give a cue card topic with 3-4 bullet points, tell the candidate they have one minute to prepare, wait until they say they are ready, then let them speak for up to two minutes without interrupting; ask one short follow-up question. Part 3: ask 3 abstract discussion questions related to the Part 2 topic.
 Speak clearly at a natural examiner pace. Do not give feedback or scores during the test. When Part 3 is finished, say "That is the end of the speaking test. Thank you."
 You open the call: as soon as it starts, greet the candidate and begin Part 1 without waiting.
-If the candidate answers in Spanish or says they don't know how to say something, kindly say "Try to answer in English, for example: ..." giving them a short English sentence starter, and wait for their answer in English.`;
+If the candidate answers in Spanish or says they don't know how to say something, kindly say "Try to answer in English, for example: ..." giving them a short English sentence starter, and wait for their answer in English.${voice}`;
   }
   const topic = str(opts.topic, 80).replace(/["<>{}]/g, "");
   const correct = opts.correction === "now" || sc.id === "tutor"
@@ -122,7 +125,7 @@ If the candidate answers in Spanish or says they don't know how to say something
 The learner's native language is Spanish and their CEFR level is ${lv}. Adapt vocabulary and grammar to that level. ${pace}
 You open the call: as soon as it starts, greet the learner warmly in English, introduce yourself in one short sentence and ask your first simple question. Do not wait for them to speak first.
 Keep each of your turns short (1-3 sentences) and usually end with a question so the learner talks more than you. ${correct}
-SPANISH BRIDGE (very important): the learner may answer in Spanish or say "no sé" / "¿cómo se dice...?" when they don't know how to say something. When that happens: (1) reassure them very briefly (you may use at most one short Spanish phrase, like "¡Tranquilo!"), (2) say the English version of exactly what they wanted to say, slowly and clearly, (3) ask them to repeat it ("Can you say it?"), (4) when they repeat it, praise them briefly and continue the conversation in English. Never switch the conversation to Spanish.`;
+SPANISH BRIDGE (very important): the learner may answer in Spanish or say "no sé" / "¿cómo se dice...?" when they don't know how to say something. When that happens: (1) reassure them very briefly (you may use at most one short Spanish phrase, like "¡Tranquilo!"), (2) say the English version of exactly what they wanted to say, slowly and clearly, (3) ask them to repeat it ("Can you say it?"), (4) when they repeat it, praise them briefly and continue the conversation in English. Never switch the conversation to Spanish.${voice}`;
 }
 
 export function reviewPrompt(sc, lv, turns) {
@@ -202,6 +205,29 @@ export function normalizeReading(o) {
     glossary: arr(o && o.glossary, 12).map(g => [str(g && g.word, 60), str(g && g.es, 120)]).filter(g => g[0] && g[1]),
     questions,
   };
+}
+
+/** a y b son personajes ({ name, accent }) de src/content/characters.js. */
+export function dialoguePrompt(lv, prof, a, b, seed) {
+  const from = c => accentOf(c.accent).from;
+  return `Write an original short spoken conversation for an English listening exercise, for a learner at CEFR ${lv} (native Spanish speaker). The situation is related to ${prof.en}. Speaker 0 is ${a.name} (from ${from(a)}) and speaker 1 is ${b.name} (from ${from(b)}). Variation seed: ${seed}.
+Write 8 to 10 turns, strictly alternating and starting with speaker 0. Each turn is 1-2 natural spoken sentences, at most 22 words, with vocabulary and grammar appropriate for ${lv}. The conversation must have a clear situation, a small problem and a resolution. Do not write the speaker's name inside the text.
+Reply with ONLY a JSON object:
+{"title":"short title","setting_es":"una frase en español que explica la situación","lines":[{"s":0,"text":"..."},{"s":1,"text":"..."}],"questions":[{"q":"comprehension question","o":["option A","option B","option C"],"a":0}]}
+Write exactly 3 questions with 3 options each; "a" is the index of the correct option, and vary its position.`;
+}
+
+export function normalizeDialogue(o) {
+  let lines = arr(o && o.lines, 14).map(l => ({ s: Number(l && l.s) === 1 ? 1 : 0, text: str(l && l.text, 240) })).filter(l => l.text);
+  // El TTS a dos voces admite un guion corto: se recorta por el final si se pasa.
+  while (lines.length > 4 && lines.reduce((n, l) => n + l.text.length + 12, 0) > 1100) lines = lines.slice(0, -1);
+  const questions = arr(o && o.questions, 3).map(q => {
+    const opts = arr(q && q.o, 4).map(x => str(x, 160)).filter(Boolean);
+    const a = Math.round(Number(q && q.a));
+    return { q: str(q && q.q, 200), o: opts, a: Number.isInteger(a) && a >= 0 && a < opts.length ? a : 0 };
+  }).filter(q => q.q && q.o.length >= 2);
+  if (lines.length < 4 || !lines.some(l => l.s === 0) || !lines.some(l => l.s === 1) || questions.length < 2) throw new HttpError(502, "invalid_json", "El diálogo llegó incompleto. Inténtalo otra vez.");
+  return { title: str(o && o.title, 120) || "Dialogue", setting_es: str(o && o.setting_es, 240), lines: lines.map(l => [l.s, l.text]), questions };
 }
 
 export function wordPrompt(word, sentence) {

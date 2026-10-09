@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import SpeakButton from "../components/SpeakButton.jsx";
+import Dialogos from "./Dialogos.jsx";
 import { DICTATION } from "../content/dictation.js";
 import { STORIES } from "../content/stories.js";
 import { professionOf } from "../content/professions.js";
@@ -19,10 +20,11 @@ export default function Leer(props) {
   return (
     <>
       <div className="seg" role="group" aria-label="Modo">
-        <button type="button" aria-pressed={mode !== "lectura"} onClick={() => setMode("dictado")}>Dictado</button>
+        <button type="button" aria-pressed={mode !== "lectura" && mode !== "dialogo"} onClick={() => setMode("dictado")}>Dictado</button>
         <button type="button" aria-pressed={mode === "lectura"} onClick={() => setMode("lectura")}>Lectura</button>
+        <button type="button" aria-pressed={mode === "dialogo"} onClick={() => setMode("dialogo")}>Diálogos</button>
       </div>
-      {mode === "lectura" ? <Lectura {...props} /> : <Dictado {...props} />}
+      {mode === "lectura" ? <Lectura {...props} /> : mode === "dialogo" ? <Dialogos {...props} /> : <Dictado {...props} />}
     </>
   );
 }

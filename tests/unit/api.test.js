@@ -120,3 +120,18 @@ describe("parseJson", () => {
     expect(parseJson("```json\n[1,2]\n```")).toEqual([1, 2]);
   });
 });
+
+describe("health y el código de acceso", () => {
+  const ask = async code => {
+    const { default: health } = await import("../../api/_routes/health.js");
+    return new Promise(resolve => health({ method: "GET", headers: code ? { "x-access-code": code } : {} }, { statusCode: 200, setHeader() {}, end(b) { resolve(JSON.parse(b)); } }));
+  };
+  afterEach(() => { delete process.env.APP_ACCESS_CODE; });
+  it("accessOk dice si el código de este dispositivo es correcto", async () => {
+    expect(await ask()).toMatchObject({ accessCodeRequired: false, accessOk: true });
+    process.env.APP_ACCESS_CODE = "lima2026";
+    expect(await ask()).toMatchObject({ accessCodeRequired: true, accessOk: false });
+    expect(await ask("otro")).toMatchObject({ accessOk: false });
+    expect(await ask("lima2026")).toMatchObject({ accessOk: true });
+  });
+});

@@ -22,9 +22,10 @@ import { useStore } from "./store.js";
 import { dkey } from "./lib/dates.js";
 import { CORE_MISSIONS, missionDone, streak } from "./lib/game.js";
 import { health, setAccessCode } from "./lib/api.js";
+import AccessCode from "./components/AccessCode.jsx";
 import { configureAudio, setFallbackHandler } from "./lib/audio.js";
 import { configureSpeech } from "./lib/speech.js";
-import { loadKokoro } from "./lib/kokoro.js";
+import { kokoroCached, loadKokoro } from "./lib/kokoro.js";
 import { addProfessionCards } from "./lib/state.js";
 
 const TABS = [["hoy", "Hoy", "home"], ["envivo", "En vivo", "mic"], ["hablar", "Hablar", "wave"], ["conversar", "Conversar", "chat"], ["leer", "Escuchar y leer", "headphones"], ["jugar", "Jugar", "game"], ["gramatica", "Gramática", "book"], ["repaso", "Repaso", "cards"], ["liga", "Liga", "trophy"]];
@@ -50,7 +51,7 @@ export default function App() {
   const [league, setLeague] = useState(null);
   const today = dkey();
 
-  useEffect(() => { health().then(h => { configureSpeech({ stt: !!h.stt }); setServer({ ...h, checked: true }); }); }, []);
+  useEffect(() => { setAccessCode(s.profile.accessCode); health().then(h => { configureSpeech({ stt: !!h.stt }); setServer({ ...h, checked: true }); }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setFallbackHandler(reason => toast("Voz natural no disponible ahora: " + reason + " Suena la voz del navegador.")); }, [toast]);
   useEffect(() => { setAccessCode(s.profile.accessCode); }, [s.profile.accessCode]);
   useEffect(() => { setDiag(!!s.profile.diag); }, [s.profile.diag]);
@@ -61,7 +62,8 @@ export default function App() {
     return () => clearTimeout(id);
   }, [toasts]);
 
-  const ai = server.ai && (!server.accessCodeRequired || !!s.profile.accessCode);
+  const needCode = server.checked && server.ai && server.accessCodeRequired && (!s.profile.accessCode || server.accessOk === false);
+  const ai = server.ai && (!server.accessCodeRequired || (!!s.profile.accessCode && server.accessOk !== false));
   const theme = s.profile.theme || "system";
   useEffect(() => {
     const root = document.documentElement;
@@ -87,7 +89,11 @@ export default function App() {
   const geminiVoice = ai && server.gemini !== false;
   useEffect(() => { configureAudio({ mode: voiceMode, voice, accent, tone, rate, ai: geminiVoice, kokoroVoice }); }, [voiceMode, voice, accent, tone, rate, geminiVoice, kokoroVoice]);
   // Si ya descargó Kokoro, se carga desde la caché al abrir la app (sin volver a bajar el modelo).
-  useEffect(() => { if (kokoroEnabled) loadKokoro(); }, [kokoroEnabled]);
+  // Si el modelo ya está guardado en este navegador pero el perfil no lo recuerda, se vuelve a activar solo.
+  useEffect(() => {
+    if (kokoroEnabled) { loadKokoro(); return; }
+    kokoroCached().then(yes => { if (yes) update(d => { d.profile.kokoroEnabled = true; }); });
+  }, [kokoroEnabled, update]);
   const go = target => { setNav(n => ({ ...n, ...target })); window.scrollTo({ top: 0 }); };
   const xp = s.xpByDay[today] || 0;
   const aiLabel = !server.checked ? "Coach IA: conectando…" : ai ? "Coach IA activo" : server.ai ? "Falta código de acceso" : "Modo básico (sin IA)";
@@ -145,6 +151,7 @@ export default function App() {
           <section className="view"><Onboarding s={s} onDone={profile => update(d => { d.profile = { ...d.profile, ...profile }; addProfessionCards(d); return ["¡Listo! Estas son tus misiones de hoy."]; })} /></section>
         ) : (
           <section className="view" key={nav.tab}>
+            {needCode && <AccessCode wrong={!!s.profile.accessCode} onOk={code => { update(d => { d.profile.accessCode = code; return ["Coach IA activado en este dispositivo"]; }); setServer(v => ({ ...v, accessOk: true })); }} />}
             <ErrorBoundary resetKey={nav.tab}>
             {nav.tab === "hoy" && <Hoy s={s} today={today} go={go} league={league} server={server} update={update} onSettings={() => setSettings(true)} />}
             {nav.tab === "envivo" && <EnVivo {...common} />}

@@ -22,7 +22,7 @@ async function start(page, { ai = true, profile = {}, routes = {} } = {}) {
   await page.route("**/api/**", async route => {
     const name = new URL(route.request().url()).pathname.replace("/api/", "");
     const json = body => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
-    if (name === "health") return json({ ok: true, ai, accessCodeRequired: false });
+    if (name === "health") return json(routes.health ? routes.health(route.request().headers()) : { ok: true, ai, accessCodeRequired: false });
     const body = route.request().postDataJSON();
     (seen[name] = seen[name] || []).push(body);
     if (name === "tts") return route.fulfill({ status: 200, contentType: "audio/wav", body: wav(body.lines ? 2 : 1) });
@@ -269,4 +269,73 @@ test("panel: «Lo nuevo» lleva a cada función, marca las vistas y se puede ocu
   await expect(box).toHaveCount(0);
   await page.reload();
   await expect(page.getByTestId("whats-new")).toHaveCount(0);
+});
+
+test("código de acceso: se pide una vez en el panel, se comprueba y queda guardado", async ({ page }) => {
+  const health = h => ({ ok: true, ai: true, accessCodeRequired: true, accessOk: h["x-access-code"] === "lima2026" });
+  const seen = await start(page, { routes: { health } });
+  const box = page.getByTestId("access-code");
+  await expect(box).toContainText("Activa el coach IA en este dispositivo");
+  await box.getByRole("textbox").fill("otro");
+  await box.getByRole("button", { name: "Activar" }).click();
+  await expect(box).toContainText("no es correcto");
+  await box.getByRole("textbox").fill(" lima2026 ");
+  await box.getByRole("button", { name: "Activar" }).click();
+  await expect(box).toHaveCount(0);
+  await expect(page.locator(".chips .ai-on")).toContainText("Coach IA activo");
+  // Al volver a abrir la app no se pide de nuevo, y las consultas llevan el código.
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Hola, Ana/ })).toBeVisible();
+  await expect(page.locator(".chips .ai-on")).toContainText("Coach IA activo");
+  await expect(page.getByTestId("access-code")).toHaveCount(0);
+  const req = page.waitForRequest("**/api/tts");
+  await tab(page, "Gramática");
+  await page.locator(".examples li").first().getByRole("button").click();
+  expect((await req).headers()["x-access-code"]).toBe("lima2026");
+  expect(seen.tts).toHaveLength(1);
+});
+
+test("código de acceso guardado que ya no sirve: avisa y deja corregirlo", async ({ page }) => {
+  const health = h => ({ ok: true, ai: true, accessCodeRequired: true, accessOk: h["x-access-code"] === "nuevo" });
+  await start(page, { profile: { accessCode: "viejo" }, routes: { health } });
+  await expect(page.getByTestId("access-code")).toContainText("ya no es válido");
+  await expect(page.locator(".chips .ai-off")).toContainText("Falta código de acceso");
+});
+
+test("voz Kokoro descargada: sigue activa después de Guardar y de volver a abrir la app", async ({ page }) => {
+  await page.addInitScript(() => {
+    const wavBuf = () => { const n = 24000, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf); const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+      w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 24000, true); v.setUint32(28, 48000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true); return buf; };
+    window.__kokoroMsgs = [];
+    window.Worker = class {
+      postMessage(m) {
+        window.__kokoroMsgs.push(m);
+        // La carga tarda: sirve para comprobar que el botón espera al modelo en vez de usar otra voz.
+        if (m.type === "load") setTimeout(() => this.onmessage({ data: { type: "ready" } }), 1500);
+        if (m.type === "speak") setTimeout(() => this.onmessage({ data: { type: "audio", id: m.id, buf: wavBuf() } }), 20);
+      }
+      terminate() {}
+    };
+  });
+  const seen = await start(page);
+  await page.getByTestId("user-menu").click();
+  await page.getByRole("menuitem", { name: /Ajustes/ }).click();
+  await page.getByRole("button", { name: "Kokoro (en tu equipo)" }).click();
+  await page.getByRole("button", { name: "Descargar voz Kokoro" }).click();
+  await expect(page.getByTestId("kokoro")).toContainText("Voz Kokoro lista");
+  await page.getByRole("button", { name: "Guardar" }).click();
+  let profile = await page.evaluate(() => JSON.parse(localStorage.getItem("mision-ingles-v1")).profile);
+  expect(profile).toMatchObject({ kokoroEnabled: true, voiceMode: "kokoro" });
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /Hola, Ana/ })).toBeVisible();
+  await tab(page, "Gramática");
+  const btn = page.locator(".examples li").first().getByRole("button");
+  await btn.click(); // el modelo aún se está cargando: espera
+  await expect(btn).toHaveClass(/loading/);
+  await expect(btn).toHaveAttribute("data-engine", "kokoro", { timeout: 8000 });
+  await expect(btn).toHaveClass(/playing/);
+  expect(await page.evaluate(() => window.__kokoroMsgs.map(m => m.type))).toEqual(["load", "speak"]);
+  expect(seen.tts || []).toHaveLength(0);
+  await expect(page.locator(".toast")).toHaveCount(0);
 });

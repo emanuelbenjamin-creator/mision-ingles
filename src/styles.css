@@ -528,3 +528,7 @@ body.diag-on.diag-min { padding-bottom: 56px; }
   .wn-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 78%; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
   .wn-item { scroll-snap-align: start; }
 }
+
+/* ---------- código de acceso (una sola vez por dispositivo) ---------- */
+.access { display: grid; gap: 8px; padding: 14px 16px; border-radius: var(--r); border: 1px solid var(--accent); background: var(--accent-soft); }
+.access form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }

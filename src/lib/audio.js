@@ -1,6 +1,6 @@
 import { apiBlob } from "./api.js";
 import { hash } from "./dates.js";
-import { kokoroReady, kokoroSpeak } from "./kokoro.js";
+import { kokoroReady, kokoroSpeak, whenKokoroReady } from "./kokoro.js";
 import { recordLocal } from "./trace.js";
 import { accentOf } from "../content/voices.js";
 
@@ -168,6 +168,12 @@ async function start(text, { slow = false, id = text, voice, kokoroVoice, kokoro
   halt();
   const my = turn;
   if (prefs.mode === "kokoro" || kokoroVoice) {
+    // Al abrir la app el modelo tarda unos segundos en cargar desde la caché: se espera en vez de usar otra voz.
+    if (!kokoroReady()) {
+      setState({ id, status: "loading", engine: "kokoro" });
+      await whenKokoroReady();
+      if (my !== turn) return;
+    }
     if (kokoroReady()) {
       try { if (await playKokoro(text, slow, id, my, kokoroVoice, speed)) return; }
       catch (e) { if (my !== turn) return; reportFallback("La voz Kokoro falló: " + ((e && e.message) || "error")); }

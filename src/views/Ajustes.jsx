@@ -23,7 +23,7 @@ export default function Ajustes({ s, update, replace, server, onClose, toast, ai
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const save = () => { update(d => { const changed = d.profile.profession !== p.profession; d.profile = { ...d.profile, ...p, name: p.name.trim().slice(0, 40), accessCode: p.accessCode.trim() }; const n = changed ? addProfessionCards(d) : 0; return [n ? `Ajustes guardados · ${n} tarjetas de tu profesión agregadas` : "Ajustes guardados"]; }); onClose(); };
+  const save = () => { update(d => { const changed = d.profile.profession !== p.profession; d.profile = { ...d.profile, ...p, name: p.name.trim().slice(0, 40), accessCode: p.accessCode.trim(), kokoroEnabled: d.profile.kokoroEnabled || !!p.kokoroEnabled }; const n = changed ? addProfessionCards(d) : 0; return [n ? `Ajustes guardados · ${n} tarjetas de tu profesión agregadas` : "Ajustes guardados"]; }); onClose(); };
   const download = () => {
     const blob = new Blob([exportState(s)], { type: "application/json" });
     const a = document.createElement("a");
@@ -62,7 +62,7 @@ export default function Ajustes({ s, update, replace, server, onClose, toast, ai
             <button type="button" aria-pressed={p.voiceMode === "browser"} onClick={() => set({ voiceMode: "browser" })}>Del navegador</button>
           </div>
           {(!p.voiceMode || p.voiceMode === "natural") && <VoicePicker value={p.voice} onChange={voice => set({ voice })} />}
-          {p.voiceMode === "kokoro" && <KokoroPanel value={p.kokoroVoice || "af_heart"} onChange={kokoroVoice => set({ kokoroVoice })} onEnable={() => update(d => { d.profile.kokoroEnabled = true; })} />}
+          {p.voiceMode === "kokoro" && <KokoroPanel value={p.kokoroVoice || "af_heart"} onChange={kokoroVoice => set({ kokoroVoice })} onEnable={() => { set({ kokoroEnabled: true }); update(d => { d.profile.kokoroEnabled = true; d.profile.voiceMode = "kokoro"; }); }} />}
           <VoiceStatus natural={p.voiceMode !== "browser"} ai={ai} />
         </div>
         <div className="field"><label htmlFor="stAccent">Acento</label><select id="stAccent" value={p.accent} onChange={e => set({ accent: e.target.value })}>{ACCENTS.map(a => <option key={a.id} value={a.id}>{a.es}</option>)}</select>

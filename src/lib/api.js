@@ -56,6 +56,15 @@ export async function health() {
   try { return await api("health"); } catch { return { ai: false, accessCodeRequired: false }; }
 }
 
+/** Comprueba un código de acceso contra el servidor sin guardarlo. Devuelve true, false o null (sin conexión). */
+export async function checkCode(code) {
+  try {
+    const res = await fetch("/api/health", { headers: { "x-access-code": String(code || "").trim() } });
+    const data = await res.json();
+    return data.accessOk !== false;
+  } catch { return null; }
+}
+
 /** Igual que api() pero devuelve el cuerpo como Blob (audio). */
 export async function apiBlob(path, body, { signal } = {}) {
   countUsage(path);

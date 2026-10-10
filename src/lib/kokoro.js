@@ -44,6 +44,30 @@ function ensureWorker() {
   return worker;
 }
 
+/** Resuelve true cuando el modelo está listo; false si falla, si no se está cargando o si pasa el tiempo. */
+export function whenKokoroReady(timeoutMs = 25000) {
+  if (state.status === "ready") return Promise.resolve(true);
+  if (state.status !== "downloading") return Promise.resolve(false);
+  return new Promise(resolve => {
+    const done = v => { clearTimeout(timer); un(); resolve(v); };
+    const un = subscribeKokoro(st => { if (st.status === "ready") done(true); else if (st.status === "error") done(false); });
+    const timer = setTimeout(() => done(false), timeoutMs);
+  });
+}
+
+/** ¿El modelo ya está guardado en este navegador? (lo deja ahí transformers.js la primera vez que se descarga). */
+export async function kokoroCached() {
+  try {
+    if (typeof caches === "undefined") return false;
+    for (const name of await caches.keys()) {
+      if (!/transformers/i.test(name)) continue;
+      const keys = await (await caches.open(name)).keys();
+      if (keys.some(r => /Kokoro/i.test(r.url) && /\.onnx/i.test(r.url))) return true;
+    }
+  } catch { /* sin Cache Storage */ }
+  return false;
+}
+
 /** Descarga (o carga desde la caché) el modelo. */
 export function loadKokoro() {
   if (!kokoroSupported() || state.status === "ready" || state.status === "downloading") return;
